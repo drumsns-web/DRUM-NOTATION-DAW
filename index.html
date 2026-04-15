@@ -8683,17 +8683,23 @@ function renderScore(){
     const svgEl = scoreDiv.querySelector('svg');
     if(svgEl){ svgEl.style.cssText='background:#fff;border-radius:8px;display:block;'; }
 
+    // ============================================================
+    // 楽器マッピング（ドラム譜標準音符位置）
+    // key: 'note/octave' or 'note/octave/x' で×符頭
+    // stem: 1=上向き(シンバル系), -1=下向き(キック・スネア系)
+    // open_hihat は noteheadCircleX（○×）
+    // ============================================================
     const DRUM = {
-      'kick':         { key:'f/4', stem:-1, xHead:false },
-      'snare':        { key:'c/5', stem:-1, xHead:false },
-      'rimshot':      { key:'c/5', stem:-1, xHead:true  },
-      'tom10':        { key:'e/5', stem:-1, xHead:false },
-      'tom12':        { key:'d/5', stem:-1, xHead:false },
-      'tom16':        { key:'a/4', stem:-1, xHead:false },
-      'closed_hihat': { key:'g/5', stem: 1, xHead:true  },
-      'open_hihat':   { key:'a/5', stem: 1, xHead:true  },
-      'crash':        { key:'b/5', stem: 1, xHead:true  },
-      'ride':         { key:'f/5', stem: 1, xHead:true  },
+      'kick':         { key:'f/4',   stem:-1, openHihat:false },
+      'snare':        { key:'c/5',   stem:-1, openHihat:false },
+      'rimshot':      { key:'c/5/x', stem:-1, openHihat:false },
+      'tom10':        { key:'e/5',   stem:-1, openHihat:false },
+      'tom12':        { key:'d/5',   stem:-1, openHihat:false },
+      'tom16':        { key:'a/4',   stem:-1, openHihat:false },
+      'closed_hihat': { key:'g/5/x', stem: 1, openHihat:false },
+      'open_hihat':   { key:'a/5/x', stem: 1, openHihat:true  },
+      'crash':        { key:'b/5/x', stem: 1, openHihat:false },
+      'ride':         { key:'f/5/x', stem: 1, openHihat:false },
     };
 
     function pitchVal(k){
@@ -8707,14 +8713,21 @@ function renderScore(){
         const rKey = stemDir===1 ? 'a/5':'e/4';
         return new StaveNote({ keys:[rKey], duration:DURR, stem_direction:stemDir });
       }
+      // 高い音順にソート
       const sorted = [...evList].sort((a,b)=>
         pitchVal(DRUM[b.track]?.key||'b/4')-pitchVal(DRUM[a.track]?.key||'b/4'));
-      const keys      = sorted.map(e=>DRUM[e.track]?.key||'b/4');
-      const noteHeads = sorted.map(e=>({ type: DRUM[e.track]?.xHead?'x':'default' }));
-      return new StaveNote({
-        keys, duration:DUR, stem_direction:stemDir,
-        clef:'percussion', note_heads:noteHeads
+      const keys = sorted.map(e=>DRUM[e.track]?.key||'b/4');
+      const note = new StaveNote({
+        keys, duration:DUR, stem_direction:stemDir, clef:'percussion'
       });
+      // open_hihat は描画後に○マーク(Articulation'a○')を追加
+      // noteheadCircleX は glyph_code を直接書き換え
+      sorted.forEach((ev, i) => {
+        if(DRUM[ev.track]?.openHihat && note.noteHeads[i]){
+          note.noteHeads[i].glyph_code = 'noteheadCircleX';
+        }
+      });
+      return note;
     }
 
     for(let m=0; m<measures; m++){

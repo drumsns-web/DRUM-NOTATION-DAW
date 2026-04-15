@@ -8401,18 +8401,18 @@ const ORNAMENTS = [
   { id:'buzz',  label:'バズロール', short:'BZ' }
 ];
 const TRACKS = [
-  // lower voice（下向き符幹）: Kick=第5線下, Snare=第3線, Tom類は五線内外
-  { id:'kick',        label:'Kick',       short:'K',  accent:'#4ecdc4', group:'kick',   scoreY:123, voice:'lower', midiNote:36 },
-  { id:'snare',       label:'Snare',      short:'S',  accent:'#ff6b35', group:'snare',  scoreY:102, voice:'lower', midiNote:38 },
-  { id:'rimshot',     label:'Closed Rim', short:'RM', accent:'#a0c4ff', group:'snare',  scoreY:109, voice:'lower', midiNote:37 },
+  // upper voice（上向き符幹）: シンバル・HH類 → グリッド上部
+  { id:'crash',       label:'Crash',      short:'CR', accent:'#c77dff', group:'cymbal', scoreY:46,  voice:'upper', midiNote:49, xHead:true },
+  { id:'ride',        label:'Ride',       short:'RD', accent:'#9b5de5', group:'cymbal', scoreY:53,  voice:'upper', midiNote:51, xHead:true },
+  { id:'open_hihat',  label:'Open HH',    short:'OH', accent:'#ffd166', group:'hihat',  scoreY:53,  voice:'upper', midiNote:46, xHead:true },
+  { id:'closed_hihat',label:'Closed HH',  short:'CH', accent:'#ffe66d', group:'hihat',  scoreY:60,  voice:'upper', midiNote:42, xHead:true },
+  // lower voice（下向き符幹）: タム・スネア・キック → グリッド下部
   { id:'tom10',       label:'Tom 10"',    short:'T1', accent:'#f87171', group:'tom',    scoreY:81,  voice:'lower', midiNote:48 },
   { id:'tom12',       label:'Tom 12"',    short:'T2', accent:'#fb923c', group:'tom',    scoreY:88,  voice:'lower', midiNote:47 },
   { id:'tom16',       label:'Floor Tom',  short:'FT', accent:'#fbbf24', group:'tom',    scoreY:116, voice:'lower', midiNote:43 },
-  // upper voice（上向き符幹）: HiHat=第5線上, Crash/Ride=第5線より上
-  { id:'closed_hihat',label:'Closed HH',  short:'CH', accent:'#ffe66d', group:'hihat',  scoreY:60,  voice:'upper', midiNote:42, xHead:true },
-  { id:'open_hihat',  label:'Open HH',    short:'OH', accent:'#ffd166', group:'hihat',  scoreY:53,  voice:'upper', midiNote:46, xHead:true },
-  { id:'crash',       label:'Crash',      short:'CR', accent:'#c77dff', group:'cymbal', scoreY:46,  voice:'upper', midiNote:49, xHead:true },
-  { id:'ride',        label:'Ride',       short:'RD', accent:'#9b5de5', group:'cymbal', scoreY:53,  voice:'upper', midiNote:51, xHead:true },
+  { id:'snare',       label:'Snare',      short:'S',  accent:'#ff6b35', group:'snare',  scoreY:102, voice:'lower', midiNote:38 },
+  { id:'rimshot',     label:'Closed Rim', short:'RM', accent:'#a0c4ff', group:'snare',  scoreY:109, voice:'lower', midiNote:37 },
+  { id:'kick',        label:'Kick',       short:'K',  accent:'#4ecdc4', group:'kick',   scoreY:123, voice:'lower', midiNote:36 },
 ];
 
 const DEFAULT = {

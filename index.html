@@ -8637,20 +8637,15 @@ function renderControls(){
 function renderScore(){
   const scoreDiv = document.getElementById('scoreDiv');
 
-  // ---- デバッグ: エラーを画面に表示 ----
   function showError(msg){
     scoreDiv.innerHTML = `<div style="color:red;padding:8px;font-size:12px;background:#fff;border-radius:8px">
       <b>譜面エラー:</b><br><pre style="white-space:pre-wrap">${msg}</pre></div>`;
   }
 
   try {
-    if(typeof Vex === 'undefined'){
-      showError('VexFlowが読み込まれていません\nCDN接続を確認してください');
-      return;
-    }
+    if(typeof Vex === 'undefined'){ showError('VexFlowが読み込まれていません'); return; }
 
-    // VexFlow 4.x: クラスは Vex.Flow.* にある
-    const VF = Vex.Flow;
+    const VF        = Vex.Flow;
     const Renderer  = VF.Renderer;
     const Stave     = VF.Stave;
     const StaveNote = VF.StaveNote;
@@ -8659,8 +8654,7 @@ function renderScore(){
     const Beam      = VF.Beam;
 
     if(!Renderer || !Stave || !StaveNote){
-      showError('VexFlow APIが見つかりません\nVex.Flow keys: ' + Object.keys(VF).slice(0,10).join(', '));
-      return;
+      showError('VexFlow APIが見つかりません'); return;
     }
 
     scoreDiv.innerHTML = '';
@@ -8676,99 +8670,98 @@ function renderScore(){
     const DUR  = spbVal===1?'q': spbVal===2?'8': spbVal===4?'16':'32';
     const DURR = DUR + 'r';
 
-    const renderer = new Renderer(scoreDiv, Renderer.Backends.SVG);
-    renderer.resize(SVG_W, SVG_H);
-    const ctx = renderer.getContext();
-
-    const svgEl = scoreDiv.querySelector('svg');
-    if(svgEl){ svgEl.style.cssText='background:#fff;border-radius:8px;display:block;'; }
-
-    // ============================================================
-    // 楽器マッピング（ドラム譜標準音符位置）
-    // key: 'note/octave' or 'note/octave/x' で×符頭
-    // stem: 1=上向き(シンバル系), -1=下向き(キック・スネア系)
-    // open_hihat は noteheadCircleX（○×）
-    // ============================================================
+    // ドラム譜ピッチマッピング
+    // '/x' サフィックスで×符頭（VexFlow percussion記法）
     const DRUM = {
-      'kick':         { key:'f/4',   stem:-1, openHihat:false },
-      'snare':        { key:'c/5',   stem:-1, openHihat:false },
-      'rimshot':      { key:'c/5/x', stem:-1, openHihat:false },
-      'tom10':        { key:'e/5',   stem:-1, openHihat:false },
-      'tom12':        { key:'d/5',   stem:-1, openHihat:false },
-      'tom16':        { key:'a/4',   stem:-1, openHihat:false },
-      'closed_hihat': { key:'g/5/x', stem: 1, openHihat:false },
-      'open_hihat':   { key:'a/5/x', stem: 1, openHihat:true  },
-      'crash':        { key:'b/5/x', stem: 1, openHihat:false },
-      'ride':         { key:'f/5/x', stem: 1, openHihat:false },
+      'kick':         { key:'f/4',   stem:-1 },
+      'snare':        { key:'c/5',   stem:-1 },
+      'rimshot':      { key:'c/5/x', stem:-1 },
+      'tom10':        { key:'e/5',   stem:-1 },
+      'tom12':        { key:'d/5',   stem:-1 },
+      'tom16':        { key:'a/4',   stem:-1 },
+      'closed_hihat': { key:'g/5/x', stem: 1 },
+      'open_hihat':   { key:'a/5/x', stem: 1 },
+      'crash':        { key:'b/5/x', stem: 1 },
+      'ride':         { key:'f/5/x', stem: 1 },
     };
 
     function pitchVal(k){
-      const m=k.match(/([a-g])\/(\d)/i);
+      const m = k.match(/([a-g])\/(\d)/i);
       if(!m) return 0;
-      return parseInt(m[2])*7+{c:0,d:1,e:2,f:3,g:4,a:5,b:6}[m[1].toLowerCase()];
+      return parseInt(m[2])*7 + {c:0,d:1,e:2,f:3,g:4,a:5,b:6}[m[1].toLowerCase()];
     }
 
     function makeNote(evList, stemDir){
-      if(evList.length===0){
-        const rKey = stemDir===1 ? 'a/5':'e/4';
+      if(evList.length === 0){
+        const rKey = stemDir === 1 ? 'a/5' : 'e/4';
         return new StaveNote({ keys:[rKey], duration:DURR, stem_direction:stemDir });
       }
-      // 高い音順にソート
-      const sorted = [...evList].sort((a,b)=>
-        pitchVal(DRUM[b.track]?.key||'b/4')-pitchVal(DRUM[a.track]?.key||'b/4'));
-      const keys = sorted.map(e=>DRUM[e.track]?.key||'b/4');
+      const sorted = [...evList].sort((a,b) =>
+        pitchVal(DRUM[b.track]?.key||'b/4') - pitchVal(DRUM[a.track]?.key||'b/4')
+      );
+      const keys = sorted.map(e => DRUM[e.track]?.key || 'b/4');
       const note = new StaveNote({
         keys, duration:DUR, stem_direction:stemDir, clef:'percussion'
       });
-      // open_hihat は描画後に○マーク(Articulation'a○')を追加
-      // noteheadCircleX は glyph_code を直接書き換え
+      // open_hihat: noteheadCircleX
       sorted.forEach((ev, i) => {
-        if(DRUM[ev.track]?.openHihat && note.noteHeads[i]){
-          note.noteHeads[i].glyph_code = 'noteheadCircleX';
+        if(DRUM[ev.track]?.key?.endsWith('/x') && note.noteHeads && note.noteHeads[i]){
+          if(ev.track === 'open_hihat'){
+            note.noteHeads[i].glyph_code = 'noteheadCircleX';
+          }
         }
       });
       return note;
     }
 
+    const renderer = new Renderer(scoreDiv, Renderer.Backends.SVG);
+    renderer.resize(SVG_W, SVG_H);
+    const ctx = renderer.getContext();
+
+    // 白背景を設定
+    const svgEl = scoreDiv.querySelector('svg');
+    if(svgEl){
+      svgEl.style.cssText = 'background:#fff; border-radius:8px; display:block;';
+    }
+
     for(let m=0; m<measures; m++){
-      const spM    = 4*spbVal;
-      const staveX = STAVE_X0 + m*STAVE_W;
+      const spM    = 4 * spbVal;
+      const staveX = STAVE_X0 + m * STAVE_W;
       const stave  = new Stave(staveX, STAVE_Y, STAVE_W);
       if(m===0){ stave.addClef('percussion').addTimeSignature('4/4'); }
       stave.setContext(ctx).draw();
 
       const upNotes=[], dnNotes=[];
       for(let local=0; local<spM; local++){
-        const abs = m*spM+local;
-        const evs = state.pattern.events.filter(e=>e.step===abs);
-        const upE = evs.filter(e=>(DRUM[e.track]?.stem??-1)===1);
-        const dnE = evs.filter(e=>(DRUM[e.track]?.stem??-1)===-1);
-        upNotes.push(makeNote(upE, 1));
-        dnNotes.push(makeNote(dnE,-1));
+        const abs = m*spM + local;
+        const evs = state.pattern.events.filter(e => e.step===abs);
+        const upE = evs.filter(e => (DRUM[e.track]?.stem ?? -1) === 1);
+        const dnE = evs.filter(e => (DRUM[e.track]?.stem ?? -1) === -1);
+        upNotes.push(makeNote(upE,  1));
+        dnNotes.push(makeNote(dnE, -1));
       }
 
-      const vUp = new Voice({num_beats:4,beat_value:4}).setStrict(false);
-      const vDn = new Voice({num_beats:4,beat_value:4}).setStrict(false);
+      const vUp = new Voice({num_beats:4, beat_value:4}).setStrict(false);
+      const vDn = new Voice({num_beats:4, beat_value:4}).setStrict(false);
       vUp.addTickables(upNotes);
       vDn.addTickables(dnNotes);
 
-      // format → generateBeams → draw の順序が必須
       new Formatter().joinVoices([vUp,vDn]).format([vUp,vDn], STAVE_W-(m===0?90:20));
 
-      const bUp = Beam.generateBeams(upNotes, {stem_direction: 1});
-      const bDn = Beam.generateBeams(dnNotes, {stem_direction:-1});
+      const bUp = Beam.generateBeams(upNotes, {stem_direction:  1});
+      const bDn = Beam.generateBeams(dnNotes, {stem_direction: -1});
 
-      vUp.draw(ctx,stave);
-      vDn.draw(ctx,stave);
-      bUp.forEach(b=>b.setContext(ctx).draw());
-      bDn.forEach(b=>b.setContext(ctx).draw());
+      vUp.draw(ctx, stave);
+      vDn.draw(ctx, stave);
+      bUp.forEach(b => b.setContext(ctx).draw());
+      bDn.forEach(b => b.setContext(ctx).draw());
     }
 
   } catch(e) {
     showError(e.message + '\n' + (e.stack||'').split('\n').slice(0,5).join('\n'));
   }
 }
-function renderAll(){
+
   renderControls();
   renderGrid();
   renderScore();

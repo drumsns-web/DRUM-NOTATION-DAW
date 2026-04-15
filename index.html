@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Drum Notation DAW - TATATAN inspired</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/vexflow/4.2.2/vexflow.js"></script>
   <style>
     :root{
       --bg:#0d0d1a;
@@ -119,7 +120,8 @@
     }
     .panel-head h2{margin:0; font-size:1.02rem}
     .panel-head p{margin:0; color:var(--text-sub); font-size:.9rem}
-    .grid-scroll,.score-scroll,.json-scroll{overflow:auto; padding:12px}
+    .grid-scroll,.json-scroll{overflow:auto; padding:12px}
+    .score-scroll{overflow:auto; padding:12px; background:#fff; border-radius:12px; margin:8px}
     .ruler,.row{
       display:grid;
       grid-template-columns:120px 1fr;
@@ -276,12 +278,11 @@
 
     <section class="panel">
       <div class="panel-head">
-        <h2>簡易ドラム譜</h2>
-        <p>TATATANに寄せて、楽器別配置と装飾バッジを反映</p>
+        <h2>ドラム譜面</h2>
+        <p>VexFlow による本格記譜 — 連桁・休符・加線に対応</p>
       </div>
       <div class="score-scroll">
-        <svg id="scoreSvg" width="320" height="260" role="img" aria-label="簡易ドラム譜"></svg>
-        <div class="hint">MVP範囲では簡易記譜です。本格的な連桁・休符処理・装飾記号の厳密表記は未実装です。</div>
+        <div id="scoreDiv"></div>
       </div>
     </section>
 
@@ -326,16 +327,18 @@ const ORNAMENTS = [
   { id:'buzz',  label:'バズロール', short:'BZ' }
 ];
 const TRACKS = [
-  { id:'kick', label:'Kick', short:'K', accent:'#4ecdc4', group:'kick', scoreY:160, voice:'lower', midiNote:36 },
-  { id:'snare', label:'Snare', short:'S', accent:'#ff6b35', group:'snare', scoreY:120, voice:'lower', midiNote:38 },
-  { id:'rimshot', label:'Closed Rim', short:'RM', accent:'#a0c4ff', group:'snare', scoreY:104, voice:'lower', midiNote:37 },
-  { id:'closed_hihat', label:'Closed HH', short:'CH', accent:'#ffe66d', group:'hihat', scoreY:74, voice:'upper', midiNote:42, xHead:true },
-  { id:'open_hihat', label:'Open HH', short:'OH', accent:'#ffd166', group:'hihat', scoreY:58, voice:'upper', midiNote:46, xHead:true },
-  { id:'crash', label:'Crash', short:'CR', accent:'#c77dff', group:'cymbal', scoreY:42, voice:'upper', midiNote:49, xHead:true },
-  { id:'ride', label:'Ride', short:'RD', accent:'#9b5de5', group:'cymbal', scoreY:50, voice:'upper', midiNote:51, xHead:true },
-  { id:'tom10', label:'Tom 10"', short:'T1', accent:'#f87171', group:'tom', scoreY:98, voice:'lower', midiNote:48 },
-  { id:'tom12', label:'Tom 12"', short:'T2', accent:'#fb923c', group:'tom', scoreY:88, voice:'lower', midiNote:47 },
-  { id:'tom16', label:'Floor Tom', short:'FT', accent:'#fbbf24', group:'tom', scoreY:148, voice:'lower', midiNote:43 }
+  // lower voice（下向き符幹）: Kick=第5線下, Snare=第3線, Tom類は五線内外
+  { id:'kick',        label:'Kick',       short:'K',  accent:'#4ecdc4', group:'kick',   scoreY:123, voice:'lower', midiNote:36 },
+  { id:'snare',       label:'Snare',      short:'S',  accent:'#ff6b35', group:'snare',  scoreY:102, voice:'lower', midiNote:38 },
+  { id:'rimshot',     label:'Closed Rim', short:'RM', accent:'#a0c4ff', group:'snare',  scoreY:109, voice:'lower', midiNote:37 },
+  { id:'tom10',       label:'Tom 10"',    short:'T1', accent:'#f87171', group:'tom',    scoreY:81,  voice:'lower', midiNote:48 },
+  { id:'tom12',       label:'Tom 12"',    short:'T2', accent:'#fb923c', group:'tom',    scoreY:88,  voice:'lower', midiNote:47 },
+  { id:'tom16',       label:'Floor Tom',  short:'FT', accent:'#fbbf24', group:'tom',    scoreY:116, voice:'lower', midiNote:43 },
+  // upper voice（上向き符幹）: HiHat=第5線上, Crash/Ride=第5線より上
+  { id:'closed_hihat',label:'Closed HH',  short:'CH', accent:'#ffe66d', group:'hihat',  scoreY:60,  voice:'upper', midiNote:42, xHead:true },
+  { id:'open_hihat',  label:'Open HH',    short:'OH', accent:'#ffd166', group:'hihat',  scoreY:53,  voice:'upper', midiNote:46, xHead:true },
+  { id:'crash',       label:'Crash',      short:'CR', accent:'#c77dff', group:'cymbal', scoreY:46,  voice:'upper', midiNote:49, xHead:true },
+  { id:'ride',        label:'Ride',       short:'RD', accent:'#9b5de5', group:'cymbal', scoreY:53,  voice:'upper', midiNote:51, xHead:true },
 ];
 
 const DEFAULT = {
@@ -558,234 +561,140 @@ function renderControls(){
   });
 }
 function renderScore(){
+  if(typeof Vex === 'undefined'){ return; }
+
+  const VF = Vex.Flow;
+  const { Renderer, Stave, StaveNote, Voice, Formatter, Beam } = VF;
+  const scoreDiv = document.getElementById('scoreDiv');
+  scoreDiv.innerHTML = '';
+
+  // ============================================================
+  // レイアウト定数
+  // ============================================================
+  const spbVal   = spb();
   const measures = state.pattern.measures;
-  const measureWidth = 300;
-  const svgWidth = Math.max(340, measures * measureWidth + 24);
-  const svgHeight = 280;
-  scoreSvg.setAttribute('width', svgWidth);
-  scoreSvg.setAttribute('height', svgHeight);
-  scoreSvg.innerHTML = '';
+  const STAVE_W  = 300;
+  const STAVE_X0 = 16;
+  const STAVE_Y  = 30;
+  const SVG_W    = STAVE_X0 + measures * STAVE_W + 24;
+  const SVG_H    = 170;
 
-  const ns = 'http://www.w3.org/2000/svg';
-  const create = (tag, attrs = {}) => {
-    const el = document.createElementNS(ns, tag);
-    Object.entries(attrs).forEach(([k, v]) => el.setAttribute(k, String(v)));
-    return el;
+  const renderer = new Renderer(scoreDiv, Renderer.Backends.SVG);
+  renderer.resize(SVG_W, SVG_H);
+  const ctx = renderer.getContext();
+
+  // 白背景
+  const svgEl = scoreDiv.querySelector('svg');
+  if(svgEl){ svgEl.style.cssText = 'background:#fff;border-radius:8px;display:block;'; }
+
+  // ============================================================
+  // グリッドモード → VexFlow duration
+  // ============================================================
+  const DUR  = spbVal===1?'q': spbVal===2?'8': spbVal===4?'16':'32';
+  const DURR = DUR + 'r';
+
+  // ============================================================
+  // 楽器マッピング
+  // VexFlow percussion clef での標準的な音符配置
+  // note_heads で符頭種類を per-key 指定できる
+  // ============================================================
+  const DRUM = {
+    'kick':         { key:'f/4',  stem:-1, xHead:false },  // 第1線下スペース
+    'snare':        { key:'c/5',  stem:-1, xHead:false },  // 第3間
+    'rimshot':      { key:'c/5',  stem:-1, xHead:true  },  // 第3間 ×
+    'tom10':        { key:'e/5',  stem:-1, xHead:false },  // 第4線
+    'tom12':        { key:'d/5',  stem:-1, xHead:false },  // 第3線上スペース
+    'tom16':        { key:'a/4',  stem:-1, xHead:false },  // 第2間
+    'closed_hihat': { key:'g/5',  stem: 1, xHead:true  },  // 第5線上
+    'open_hihat':   { key:'a/5',  stem: 1, xHead:true  },  // 第5線より上
+    'crash':        { key:'b/5',  stem: 1, xHead:true  },
+    'ride':         { key:'f/5',  stem: 1, xHead:true  },  // 第5線
   };
 
-  // --- 定数 ---
-  const staffLines = [70, 86, 102, 118, 134]; // 五線のY座標
-  const STEM_LEN = 28;
-  const BEAM_H = 5;   // 連桁の太さ
-  const BEAM_GAP = 4; // 連桁間のすき間
-
-  // gridMode から「1拍あたりの step 数」と「連桁グループサイズ（steps）」を決定
-  const spbVal = spb(); // steps per beat
-  // 音符種別: spbVal=1→4分, 2→8分, 4→16分, 8→32分
-  // 連桁は「1拍（=spbVal steps）」を1グループとしてビームでつなぐ
-  // ただし4分音符はビームなし（旗なし）
-  const beamGroupSize = spbVal; // 1拍ぶんのstep数 = 連桁1グループ
-
-  // 各ステップの noteX を計算する関数
-  const stepX = (measureIndex, localStep) => {
-    const marginL = 20;
-    const marginR = 16;
-    const usable = measureWidth - marginL - marginR;
-    const totalLocal = 4 * spbVal;
-    return 12 + measureIndex * measureWidth + marginL + localStep * (usable / totalLocal);
-  };
-
-  // 各ノートの stem tip Y（upper声部: 上向き, lower声部: 下向き）
-  const stemTipY = (noteY, voice) => voice === 'upper' ? noteY - STEM_LEN : noteY + STEM_LEN;
-
-  // --- 小節ごとに描画 ---
-  for (let m = 0; m < measures; m++) {
-    const x0 = 12 + m * measureWidth;
-    const x1 = x0 + measureWidth - 4;
-
-    // 五線
-    for (const ly of staffLines) {
-      scoreSvg.appendChild(create('line', { x1: x0, y1: ly, x2: x1, y2: ly, stroke: '#bfcad6', 'stroke-width': 1 }));
-    }
-    // 縦線（小節線）
-    scoreSvg.appendChild(create('line', { x1: x0, y1: staffLines[0], x2: x0, y2: staffLines[4], stroke: '#d8e1ea', 'stroke-width': m === 0 ? 2.5 : 1.5 }));
-    scoreSvg.appendChild(create('line', { x1: x1, y1: staffLines[0], x2: x1, y2: staffLines[4], stroke: '#d8e1ea', 'stroke-width': 1.5 }));
-
-    // 拍の薄い縦ガイド線
-    for (let b = 0; b < 4; b++) {
-      const gx = stepX(m, b * spbVal);
-      scoreSvg.appendChild(create('line', {
-        x1: gx - 2, y1: staffLines[0] - 8, x2: gx - 2, y2: staffLines[4] + 8,
-        stroke: 'rgba(200,200,255,0.09)', 'stroke-width': 1
-      }));
+  // ============================================================
+  // ヘルパー: StaveNote を作る
+  // ============================================================
+  function makeNote(evList, stemDir, dur){
+    if(evList.length === 0){
+      // 休符: stem方向に合わせた位置
+      const restKey = stemDir === 1 ? 'd/5' : 'b/4';
+      return new StaveNote({ keys:[restKey], duration: DURR, stem_direction: stemDir });
     }
 
-    const stepsInMeasure = 4 * spbVal;
+    // キー順序: 高い音から低い音 (stem up: 高い順, stem down: 低い順)
+    const sorted = [...evList].sort((a,b)=>{
+      const kA = DRUM[a.track]?.key||'b/4', kB = DRUM[b.track]?.key||'b/4';
+      // 簡易比較: アルファベット+数字を数値化
+      const val = k => {
+        const m = k.match(/([a-g])\/(\d)/i);
+        if(!m) return 0;
+        const notes = {c:0,d:1,e:2,f:3,g:4,a:5,b:6};
+        return parseInt(m[2])*7 + (notes[m[1].toLowerCase()]||0);
+      };
+      return stemDir===1 ? val(kB)-val(kA) : val(kA)-val(kB);
+    });
 
-    // ---- step ごとにノートヘッドと stem を先に収集 ----
-    // noteInfos[step] = { upper:[], lower:[] } — それぞれに {x, tipY, noteY, tr, abs} を格納
-    const noteInfos = [];
-    for (let local = 0; local < stepsInMeasure; local++) {
-      noteInfos.push({ upper: [], lower: [], hasNote: false });
-    }
+    const keys     = sorted.map(e => DRUM[e.track]?.key || 'b/4');
+    const noteHeads = sorted.map(e => ({
+      type: DRUM[e.track]?.xHead ? 'x' : 'default'
+    }));
 
-    for (let local = 0; local < stepsInMeasure; local++) {
-      const abs = m * stepsInMeasure + local;
-      const nx = stepX(m, local);
-      const events = state.pattern.events.filter(e => e.step === abs);
-
-      if (!events.length) {
-        // 休符ドット
-        scoreSvg.appendChild(create('rect', { x: nx - 2, y: 105, width: 4, height: 4, rx: 1.2, fill: '#6a7a8d' }));
-        continue;
-      }
-
-      noteInfos[local].hasNote = true;
-
-      events.forEach(ev => {
-        const tr = TRACKS.find(t => t.id === ev.track);
-        if (!tr) return;
-        const ny = tr.scoreY;
-        const orn = getOrn(ev.track, abs);
-
-        // ノートヘッド描画
-        if (tr.xHead) {
-          scoreSvg.appendChild(create('line', { x1: nx - 4, y1: ny - 4, x2: nx + 4, y2: ny + 4, stroke: '#e8edf3', 'stroke-width': 1.8 }));
-          scoreSvg.appendChild(create('line', { x1: nx + 4, y1: ny - 4, x2: nx - 4, y2: ny + 4, stroke: '#e8edf3', 'stroke-width': 1.8 }));
-        } else {
-          scoreSvg.appendChild(create('ellipse', { cx: nx, cy: ny, rx: 5.5, ry: 3.8, fill: orn === 'ghost' ? 'rgba(232,237,243,.45)' : '#e8edf3' }));
-        }
-
-        // stem（後でビームを乗せるため先に描画）
-        const sxOff = tr.voice === 'upper' ? 5 : -5;
-        const ty = stemTipY(ny, tr.voice);
-        scoreSvg.appendChild(create('line', {
-          x1: nx + sxOff, y1: ny, x2: nx + sxOff, y2: ty,
-          stroke: '#e8edf3', 'stroke-width': 1.3
-        }));
-
-        // ornament バッジ
-        if (orn) {
-          const short = ORNAMENTS.find(o => o.id === orn)?.short || '';
-          const fill = orn === 'accent' ? '#ff6b35' : orn === 'flam' ? '#ffe66d' :
-            orn === 'drag' ? '#ff9f43' : orn === 'rim' ? '#4ecdc4' :
-            orn === 'cross' ? '#c77dff' : orn === 'buzz' ? '#ff6b9d' : '#9ca3af';
-          const badgeY = tr.voice === 'upper' ? ty - 12 : ty + 4;
-          scoreSvg.appendChild(create('rect', { x: nx - 8, y: badgeY, width: 16, height: 10, rx: 3, fill }));
-          scoreSvg.appendChild(create('text', {
-            x: nx, y: badgeY + 8, 'text-anchor': 'middle',
-            'font-size': '8', 'font-family': 'monospace',
-            fill: (orn === 'flam' || orn === 'drag' ? '#111' : '#fff')
-          })).textContent = short;
-        }
-
-        // stem情報を収集（連桁用）
-        const info = { x: nx + (tr.voice === 'upper' ? 5 : -5), tipY: ty, noteY: ny, tr, abs };
-        if (tr.voice === 'upper') noteInfos[local].upper.push(info);
-        else noteInfos[local].lower.push(info);
-      });
-    }
-
-    // ---- 連桁（ビーム）描画 ----
-    // 4分音符(spbVal=1)はビームなし（個別の旗もなし → 4分音符は旗なし）
-    // 8分音符(spbVal=2): 1本ビーム (1拍=2steps)
-    // 16分音符(spbVal=4): 1拍内で8分レベル1本+16分レベルもう1本
-    // 32分音符(spbVal=8): 1拍内で8分1本+16分1本+32分1本
-
-    if (spbVal >= 2) {
-      // 1拍ごとにグループ化してビーム処理
-      for (let beat = 0; beat < 4; beat++) {
-        const groupStart = beat * beamGroupSize;
-        const groupEnd = groupStart + beamGroupSize; // exclusive
-
-        // upper / lower それぞれで処理
-        for (const voice of ['upper', 'lower']) {
-          // このビームグループ内でノートがあるstepのstem先端を収集
-          const beamNotes = []; // { local, x, tipY }
-          for (let local = groupStart; local < groupEnd; local++) {
-            if (!noteInfos[local].hasNote) continue;
-            const arr = noteInfos[local][voice];
-            if (!arr.length) continue;
-            // 同声部の中で最も外側（upper:一番上, lower:一番下）のtipYを代表に
-            const tipY = voice === 'upper'
-              ? Math.min(...arr.map(i => i.tipY))
-              : Math.max(...arr.map(i => i.tipY));
-            const x = arr[0].x;
-            beamNotes.push({ local, x, tipY });
-          }
-          if (beamNotes.length < 2) continue; // ノートが1つ以下ならビーム不要
-
-          // 8分音符ビーム（第1ビーム）: グループ全体をつなぐ
-          drawBeam(beamNotes, 0, voice);
-
-          // 16分音符ビーム（第2ビーム）: 2steps=1拍の半分ずつ
-          if (spbVal >= 4) {
-            const half = beamGroupSize / 2;
-            for (let h = 0; h < 2; h++) {
-              const hStart = groupStart + h * half;
-              const sub = beamNotes.filter(n => n.local >= hStart && n.local < hStart + half);
-              if (sub.length >= 2) drawBeam(sub, 1, voice);
-              else if (sub.length === 1) drawFlag(sub[0], 1, voice); // 孤立ノートには旗
-            }
-          }
-
-          // 32分音符ビーム（第3ビーム）: 2steps=1/4拍ずつ
-          if (spbVal >= 8) {
-            const quarter = beamGroupSize / 4;
-            for (let q = 0; q < 4; q++) {
-              const qStart = groupStart + q * quarter;
-              const sub = beamNotes.filter(n => n.local >= qStart && n.local < qStart + quarter);
-              if (sub.length >= 2) drawBeam(sub, 2, voice);
-              else if (sub.length === 1) drawFlag(sub[0], 2, voice);
-            }
-          }
-        }
-      }
-    }
-    // 4分音符モードでノートが孤立していても旗・ビームなし（4分音符は旗なし）
-
-    // ---- 連桁を描画するヘルパー（ビームY を均等傾斜で） ----
-    function beamY(note, notes, beamIndex, voice) {
-      // 両端のtipYから線形補間
-      const first = notes[0], last = notes[notes.length - 1];
-      const t = notes.length === 1 ? 0 : (note.x - first.x) / (last.x - first.x);
-      const baseY = first.tipY + t * (last.tipY - first.tipY);
-      // ビームインデックスが増えるほど内側（音符に近い方）へずらす
-      const offset = beamIndex * (BEAM_H + BEAM_GAP);
-      return voice === 'upper' ? baseY + offset : baseY - offset;
-    }
-
-    function drawBeam(notes, beamIndex, voice) {
-      if (notes.length < 2) return;
-      const y1 = beamY(notes[0], notes, beamIndex, voice);
-      const y2 = beamY(notes[notes.length - 1], notes, beamIndex, voice);
-      scoreSvg.appendChild(create('line', {
-        x1: notes[0].x, y1: y1,
-        x2: notes[notes.length - 1].x, y2: y2,
-        stroke: '#e8edf3', 'stroke-width': BEAM_H,
-        'stroke-linecap': 'round'
-      }));
-    }
-
-    // 孤立ノートへの旗（単独音符で連桁相手がいないとき）
-    function drawFlag(note, beamIndex, voice) {
-      const by = note.tipY + (voice === 'upper' ? beamIndex * (BEAM_H + BEAM_GAP) : -beamIndex * (BEAM_H + BEAM_GAP));
-      const flagLen = 10;
-      const dir = voice === 'upper' ? 1 : -1;
-      // 短い横線（片側旗）
-      scoreSvg.appendChild(create('line', {
-        x1: note.x, y1: by,
-        x2: note.x + flagLen * dir, y2: by + 5 * dir,
-        stroke: '#e8edf3', 'stroke-width': BEAM_H * 0.85,
-        'stroke-linecap': 'round'
-      }));
-    }
+    const note = new StaveNote({
+      keys,
+      duration: dur,
+      stem_direction: stemDir,
+      clef: 'percussion',
+      note_heads: noteHeads,
+    });
+    return note;
   }
 
-  // 最終小節の終止線
-  const finalX = 12 + measures * measureWidth - 4;
-  scoreSvg.appendChild(create('line', { x1: finalX - 3, y1: staffLines[0], x2: finalX - 3, y2: staffLines[4], stroke: '#d8e1ea', 'stroke-width': 1.5 }));
-  scoreSvg.appendChild(create('line', { x1: finalX + 1, y1: staffLines[0], x2: finalX + 1, y2: staffLines[4], stroke: '#d8e1ea', 'stroke-width': 4 }));
+  // ============================================================
+  // 小節ループ
+  // ============================================================
+  for(let m=0; m<measures; m++){
+    const spMeasure = 4 * spbVal;
+    const staveX    = STAVE_X0 + m * STAVE_W;
+
+    const stave = new Stave(staveX, STAVE_Y, STAVE_W);
+    if(m===0){
+      stave.addClef('percussion');
+      stave.addTimeSignature('4/4');
+    }
+    stave.setContext(ctx).draw();
+
+    const upNotes   = [];
+    const downNotes = [];
+
+    for(let local=0; local<spMeasure; local++){
+      const abs    = m * spMeasure + local;
+      const evs    = state.pattern.events.filter(e => e.step === abs);
+      const upEvs  = evs.filter(e => (DRUM[e.track]?.stem??-1) === 1);
+      const dnEvs  = evs.filter(e => (DRUM[e.track]?.stem??-1) === -1);
+
+      upNotes.push(makeNote(upEvs,  1, DUR));
+      downNotes.push(makeNote(dnEvs, -1, DUR));
+    }
+
+    // Voice
+    const vUp   = new Voice({num_beats:4, beat_value:4}).setStrict(false);
+    const vDown = new Voice({num_beats:4, beat_value:4}).setStrict(false);
+    vUp.addTickables(upNotes);
+    vDown.addTickables(downNotes);
+
+    // Beam 自動生成（グループ=1拍）
+    const bUp   = Beam.generateBeams(upNotes,   {stem_direction: 1});
+    const bDown = Beam.generateBeams(downNotes,  {stem_direction:-1});
+
+    // フォーマット＆描画
+    const fmtW = STAVE_W - (m===0 ? 90 : 16);
+    new Formatter().joinVoices([vUp, vDown]).format([vUp, vDown], fmtW);
+
+    vUp.draw(ctx, stave);
+    vDown.draw(ctx, stave);
+    bUp.forEach(b => b.setContext(ctx).draw());
+    bDown.forEach(b => b.setContext(ctx).draw());
+  }
 }
 function renderAll(){
   renderControls();

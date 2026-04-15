@@ -8653,13 +8653,11 @@ function renderScore(){
     const Formatter = VF.Formatter;
     const Beam      = VF.Beam;
 
-    if(!Renderer || !Stave || !StaveNote){
-      showError('VexFlow APIが見つかりません'); return;
-    }
+    if(!Renderer || !Stave || !StaveNote){ showError('VexFlow APIが見つかりません'); return; }
 
     scoreDiv.innerHTML = '';
 
-    const spbVal   = spb();
+    const spbVal   = spb();   // steps per beat (1/2/4/8)
     const measures = state.pattern.measures;
     const STAVE_W  = 300;
     const STAVE_X0 = 16;
@@ -8667,9 +8665,9 @@ function renderScore(){
     const SVG_W    = STAVE_X0 + measures * STAVE_W + 24;
     const SVG_H    = 160;
 
-    const DUR  = spbVal===1?'q': spbVal===2?'8': spbVal===4?'16':'32';
-    const DURR = DUR + 'r';
-
+    // ── 楽器定義 ─────────────────────────────────────────────
+    // stem: 1=上向き(シンバル/HH), -1=下向き(キック/スネア)
+    // '/x' suffix → ×符頭
     const DRUM = {
       'kick':         { key:'f/4',   stem:-1 },
       'snare':        { key:'c/5',   stem:-1 },
@@ -8689,26 +8687,124 @@ function renderScore(){
       return parseInt(m[2])*7 + {c:0,d:1,e:2,f:3,g:4,a:5,b:6}[m[1].toLowerCase()];
     }
 
-    function makeNote(evList, stemDir){
-      if(evList.length === 0){
-        const rKey = stemDir === 1 ? 'a/5' : 'e/4';
-        return new StaveNote({ keys:[rKey], duration:DURR, stem_direction:stemDir });
+    // ── スマート音価変換 ──────────────────────────────────────
+    // 16分グリッドのステップ配列を「適切な音価の音符/休符リスト」に変換する。
+    //
+    // stepSlots: 各ステップのイベント配列 (長さ = spM)
+    // stemDir:   この声部のstem方向 (1 or -1)
+    //
+    // 返値: StaveNote の配列（音価の合計 = 1小節分）
+    //
+    // 音価変換規則（16分グリッドの場合、spbVal=4）:
+    //   16th×4 = 4分音符  (quarter)
+    //   16th×2 = 8分音符  (eighth)
+    //   16th×1 = 16分音符 (sixteenth)
+    //
+    // spbVal が異なる場合も同比率でスケール。
+    // 付点は使わず、タイも使わない（MVP）。
+    // ─────────────────────────────────────────────────────────
+    function buildNotes(stepSlots, stemDir){
+      const spM = stepSlots.length;          // steps per measure
+      const notes = [];
+      let i = 0;
+
+      // 音価テーブル: [duration文字列, ステップ数]（大きい順）
+      // spbVal=4(16分グリッド)の時: q=4steps, 8=2steps, 16=1step
+      // spbVal=2(8分グリッド)の時:  q=2steps, 8=1step
+      // spbVal=1(4分グリッド)の時:  q=1step
+      const durTable = [
+        { dur:'q',   steps: 4*spbVal/4 },   // 4分音符
+        { dur:'8',   steps: 2*spbVal/4 },   // 8分音符
+        { dur:'16',  steps: 1*spbVal/4 },   // 16分音符 (spbVal>=4の時のみ有効)
+        { dur:'32',  steps: Math.max(0, spbVal/8) }, // 32分
+      ].filter(d => d.steps >= 1 && Number.isInteger(d.steps));
+
+      // 各ステップに「このstemDirの楽器のイベントがあるか」
+      function hasEvent(stepIdx){
+        return stepSlots[stepIdx] && stepSlots[stepIdx].length > 0;
       }
-      const sorted = [...evList].sort((a,b) =>
-        pitchVal(DRUM[b.track]?.key||'b/4') - pitchVal(DRUM[a.track]?.key||'b/4')
-      );
-      const keys = sorted.map(e => DRUM[e.track]?.key || 'b/4');
-      const note = new StaveNote({
-        keys, duration:DUR, stem_direction:stemDir, clef:'percussion'
-      });
-      sorted.forEach((ev, i) => {
-        if(ev.track === 'open_hihat' && note.noteHeads && note.noteHeads[i]){
-          note.noteHeads[i].glyph_code = 'noteheadCircleX';
+
+      // 「steps連続で空き（音符なし）か」チェック
+      function allEmpty(start, steps){
+        for(let s=start; s<start+steps && s<spM; s++){
+          if(hasEvent(s)) return false;
         }
-      });
-      return note;
+        return true;
+      }
+
+      // 「steps連続でイベントありか」チェック（スネア等のチェックには使わない）
+      // → 実際は「このstepにイベントがある場合は最小音価で打つ」方式
+
+      while(i < spM){
+        if(hasEvent(i)){
+          // 音符あり: そのstepを最小音価（16分）で打ち、音価はそのまま
+          // → ただしupVoiceのHH等は「このstepから次の音符まで何ステップ空くか」で延長
+          //   例: step0にHH, step2にHH → step0は8分, step2は8分
+          //   例: step0にHH, step1にHH → step0は16分, step1は16分
+          // 「次の同声部音符まで or 小節末まで」の距離で音価を決める
+          let nextEvent = spM;
+          for(let j=i+1; j<spM; j++){
+            if(hasEvent(j)){ nextEvent = j; break; }
+          }
+          const gap = nextEvent - i;  // 次の音符まで or 小節末まで
+
+          // 使える最大音価を選ぶ（gapを超えない最大）
+          let chosen = durTable[durTable.length-1]; // デフォルト最小
+          for(const d of durTable){
+            if(d.steps <= gap){
+              chosen = d;
+              break;
+            }
+          }
+
+          // 音符を作成
+          const evList = stepSlots[i];
+          const sorted = [...evList].sort((a,b)=>
+            pitchVal(DRUM[b.track]?.key||'b/4') - pitchVal(DRUM[a.track]?.key||'b/4')
+          );
+          const keys = sorted.map(e => DRUM[e.track]?.key || 'b/4');
+          const note = new StaveNote({
+            keys, duration: chosen.dur, stem_direction: stemDir, clef:'percussion'
+          });
+          sorted.forEach((ev, ki) => {
+            if(ev.track === 'open_hihat' && note.noteHeads && note.noteHeads[ki]){
+              note.noteHeads[ki].glyph_code = 'noteheadCircleX';
+            }
+          });
+          notes.push(note);
+          i += chosen.steps;
+
+        } else {
+          // 休符: 次の音符まで or 小節末までを最大音価で埋める
+          let nextEvent = spM;
+          for(let j=i+1; j<spM; j++){
+            if(hasEvent(j)){ nextEvent = j; break; }
+          }
+          const gap = nextEvent - i;
+
+          // 休符も同じように最大音価を選ぶ
+          let remaining = gap;
+          while(remaining > 0){
+            let chosen = durTable[durTable.length-1];
+            for(const d of durTable){
+              if(d.steps <= remaining){
+                chosen = d;
+                break;
+              }
+            }
+            const rKey = stemDir === 1 ? 'a/5' : 'e/4';
+            notes.push(new StaveNote({
+              keys:[rKey], duration: chosen.dur + 'r', stem_direction: stemDir
+            }));
+            remaining -= chosen.steps;
+          }
+          i += gap;
+        }
+      }
+      return notes;
     }
 
+    // ── レンダリング ──────────────────────────────────────────
     const renderer = new Renderer(scoreDiv, Renderer.Backends.SVG);
     renderer.resize(SVG_W, SVG_H);
     const ctx = renderer.getContext();
@@ -8723,15 +8819,17 @@ function renderScore(){
       if(m===0){ stave.addClef('percussion').addTimeSignature('4/4'); }
       stave.setContext(ctx).draw();
 
-      const upNotes=[], dnNotes=[];
+      // 各ステップの上声部/下声部イベントを分離
+      const upSlots = [], dnSlots = [];
       for(let local=0; local<spM; local++){
         const abs = m*spM + local;
         const evs = state.pattern.events.filter(e => e.step===abs);
-        const upE = evs.filter(e => (DRUM[e.track]?.stem ?? -1) === 1);
-        const dnE = evs.filter(e => (DRUM[e.track]?.stem ?? -1) === -1);
-        upNotes.push(makeNote(upE,  1));
-        dnNotes.push(makeNote(dnE, -1));
+        upSlots.push(evs.filter(e => (DRUM[e.track]?.stem ?? -1) ===  1));
+        dnSlots.push(evs.filter(e => (DRUM[e.track]?.stem ?? -1) === -1));
       }
+
+      const upNotes = buildNotes(upSlots,  1);
+      const dnNotes = buildNotes(dnSlots, -1);
 
       const vUp = new Voice({num_beats:4, beat_value:4}).setStrict(false);
       const vDn = new Voice({num_beats:4, beat_value:4}).setStrict(false);

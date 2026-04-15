@@ -8645,13 +8645,13 @@ function renderScore(){
   try {
     if(typeof Vex === 'undefined'){ showError('VexFlowが読み込まれていません'); return; }
 
-    const VF          = Vex.Flow;
-    const Renderer    = VF.Renderer;
-    const Stave       = VF.Stave;
-    const StaveNote   = VF.StaveNote;
-    const Voice       = VF.Voice;
-    const Formatter   = VF.Formatter;
-    const Beam        = VF.Beam;
+    const VF           = Vex.Flow;
+    const Renderer     = VF.Renderer;
+    const Stave        = VF.Stave;
+    const StaveNote    = VF.StaveNote;
+    const Voice        = VF.Voice;
+    const Formatter    = VF.Formatter;
+    const Beam         = VF.Beam;
     const Articulation = VF.Articulation;
 
     if(!Renderer || !Stave || !StaveNote){ showError('VexFlow APIが見つかりません'); return; }
@@ -8666,33 +8666,40 @@ function renderScore(){
     const SVG_W    = STAVE_X0 + measures * STAVE_W + 24;
     const SVG_H    = 160;
 
-    // ── 楽器定義 ─────────────────────────────────────────────────────────
+    // ── 楽器定義（写真の記譜法に準拠）────────────────────────────────
     //
-    //  符頭の種類（写真参照）:
-    //   通常黒丸     : スネア・タム・キック
-    //   × (xHead)   : クローズドHH・クラッシュ・ライド・リムショット
-    //   ×＋上に「＋」: クローズドHH（明示的に閉じている）→ artPlus
-    //   ×＋上に「○」: オープンHH → circleX符頭 + artOpen (ao)
+    //  percussion clef = treble staff のライン配置:
+    //  加線上2: B5        加線上1sp: A5  ← クラッシュ ⊗
+    //  加線上1: G5        第5線上sp: F5? → G5 = g/5
+    //  第5線(top): F5  ← HH×/Ride×
+    //  第4間:  E5
+    //  第4線:  D5
+    //  第3間:  C5      ← ハイタム
+    //  第3線:  B4      ← スネア ●（中央線）
+    //  第2間:  A4      ← ロータム
+    //  第2線:  G4      ← フロアタム
+    //  第1間:  F4
+    //  第1線:  E4
+    //  加線下1sp: D4   ← キック ●（第1線の下）
+    //  加線下1: C4
     //
-    //  key末尾 '/x' → VexFlow percussion ×符頭
-    //  artPlus : Articulation 'a+' を符頭上に付加（クローズド記号）
-    //  artOpen : Articulation 'ao' を符頭上に付加（オープン記号）
-    //  circleX : noteheadCircleX グリフ（○×）
-    //
-    //  stem: 1=上向き(シンバル系), -1=下向き(キック/スネア系)
-    // ────────────────────────────────────────────────────────────────────
+    //  符頭:
+    //   key末尾 '/x'    → ×符頭 (HH, Ride, Rimshot)
+    //   circleX:true    → noteheadCircleX = ⊗ (Crash, OpenHH)
+    //   artPlus:true    → Articulation 'a+' 上に「＋」(ClosedHH)
+    //   artOpen:true    → Articulation 'ao' 上に「○」(OpenHH)
+    // ────────────────────────────────────────────────────────────────
     const DRUM = {
-      //                         key          stem  artPlus artOpen circleX
-      'crash':        { key:'a/5/x', stem: 1                              },
-      'ride':         { key:'g/5/x', stem: 1                              },
-      'open_hihat':   { key:'g/5/x', stem: 1,              artOpen:true, circleX:true },
-      'closed_hihat': { key:'f/5/x', stem: 1, artPlus:true               },
-      'snare':        { key:'c/5',   stem:-1                              },
-      'rimshot':      { key:'c/5/x', stem:-1                              },
-      'tom10':        { key:'e/5',   stem:-1                              },
-      'tom12':        { key:'d/5',   stem:-1                              },
-      'tom16':        { key:'a/4',   stem:-1                              },
-      'kick':         { key:'f/4',   stem:-1                              },
+      'crash':        { key:'a/5',   stem: 1, circleX:true                      },
+      'ride':         { key:'f/5/x', stem: 1                                     },
+      'open_hihat':   { key:'g/5/x', stem: 1, circleX:true, artOpen:true         },
+      'closed_hihat': { key:'f/5/x', stem: 1,               artPlus:true         },
+      'snare':        { key:'b/4',   stem:-1                                     },
+      'rimshot':      { key:'b/4/x', stem:-1                                     },
+      'tom10':        { key:'c/5',   stem:-1                                     },
+      'tom12':        { key:'a/4',   stem:-1                                     },
+      'tom16':        { key:'g/4',   stem:-1                                     },
+      'kick':         { key:'d/4',   stem:-1                                     },
     };
 
     function pitchVal(k){
@@ -8701,7 +8708,8 @@ function renderScore(){
       return parseInt(m[2])*7 + {c:0,d:1,e:2,f:3,g:4,a:5,b:6}[m[1].toLowerCase()];
     }
 
-    // ── スマート音価変換 ───────────────────────────────────────────────
+    // ── スマート音価変換 ──────────────────────────────────────────────
+    // 「次の同声部音符まで何ステップか」で音価を決定
     function buildNotes(stepSlots, stemDir){
       const spM = stepSlots.length;
       const notes = [];
@@ -8734,27 +8742,20 @@ function renderScore(){
             keys, duration:chosen.dur, stem_direction:stemDir, clef:'percussion'
           });
 
-          // 符頭・アーティキュレーションを適用
           sorted.forEach((ev, ki) => {
             const def = DRUM[ev.track];
             if(!def) return;
-            // ○× 符頭（オープンHH）
+            // ⊗ 符頭（Crash・OpenHH）
             if(def.circleX && note.noteHeads && note.noteHeads[ki]){
               note.noteHeads[ki].glyph_code = 'noteheadCircleX';
             }
-            // ＋マーク（クローズドHH）
+            // ＋マーク（ClosedHH）
             if(def.artPlus && Articulation){
-              try {
-                const art = new Articulation('a+');
-                note.addModifier(art, ki);
-              } catch(e) { /* skip */ }
+              try { note.addModifier(new Articulation('a+'), ki); } catch(e){}
             }
-            // ○マーク（オープンHH）
+            // ○マーク（OpenHH）
             if(def.artOpen && Articulation){
-              try {
-                const art = new Articulation('ao');
-                note.addModifier(art, ki);
-              } catch(e) { /* skip */ }
+              try { note.addModifier(new Articulation('ao'), ki); } catch(e){}
             }
           });
 

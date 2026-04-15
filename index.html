@@ -561,139 +561,117 @@ function renderControls(){
   });
 }
 function renderScore(){
-  if(typeof Vex === 'undefined'){ return; }
+  if(typeof Vex === 'undefined'){
+    document.getElementById('scoreDiv').textContent = 'VexFlow読み込み中...';
+    return;
+  }
 
-  const VF = Vex.Flow;
-  const { Renderer, Stave, StaveNote, Voice, Formatter, Beam } = VF;
+  const { Renderer, Stave, StaveNote, Voice, Formatter, Beam } = Vex.Flow;
   const scoreDiv = document.getElementById('scoreDiv');
   scoreDiv.innerHTML = '';
 
   // ============================================================
   // レイアウト定数
   // ============================================================
-  const spbVal   = spb();
+  const spbVal   = spb();               // 1拍あたりのstep数
   const measures = state.pattern.measures;
-  const STAVE_W  = 300;
+  const STAVE_W  = 300;                 // 1小節幅
   const STAVE_X0 = 16;
-  const STAVE_Y  = 30;
+  const STAVE_Y  = 20;
   const SVG_W    = STAVE_X0 + measures * STAVE_W + 24;
-  const SVG_H    = 170;
+  const SVG_H    = 160;
 
+  // グリッドモード → VexFlow duration
+  const DUR  = spbVal===1?'q': spbVal===2?'8': spbVal===4?'16':'32';
+  const DURR = DUR + 'r';
+
+  // Renderer 作成（先にDOMを作る）
   const renderer = new Renderer(scoreDiv, Renderer.Backends.SVG);
   renderer.resize(SVG_W, SVG_H);
   const ctx = renderer.getContext();
+  ctx.setFont('Arial', 10);
 
-  // 白背景
+  // SVG背景を白に（resize後に取得）
   const svgEl = scoreDiv.querySelector('svg');
   if(svgEl){ svgEl.style.cssText = 'background:#fff;border-radius:8px;display:block;'; }
 
   // ============================================================
-  // グリッドモード → VexFlow duration
-  // ============================================================
-  const DUR  = spbVal===1?'q': spbVal===2?'8': spbVal===4?'16':'32';
-  const DURR = DUR + 'r';
-
-  // ============================================================
-  // 楽器マッピング
-  // VexFlow percussion clef での標準的な音符配置
-  // note_heads で符頭種類を per-key 指定できる
+  // 楽器マッピング（GM Percussion / ドラム譜標準位置）
   // ============================================================
   const DRUM = {
-    'kick':         { key:'f/4',  stem:-1, xHead:false },  // 第1線下スペース
-    'snare':        { key:'c/5',  stem:-1, xHead:false },  // 第3間
-    'rimshot':      { key:'c/5',  stem:-1, xHead:true  },  // 第3間 ×
-    'tom10':        { key:'e/5',  stem:-1, xHead:false },  // 第4線
-    'tom12':        { key:'d/5',  stem:-1, xHead:false },  // 第3線上スペース
-    'tom16':        { key:'a/4',  stem:-1, xHead:false },  // 第2間
-    'closed_hihat': { key:'g/5',  stem: 1, xHead:true  },  // 第5線上
-    'open_hihat':   { key:'a/5',  stem: 1, xHead:true  },  // 第5線より上
-    'crash':        { key:'b/5',  stem: 1, xHead:true  },
-    'ride':         { key:'f/5',  stem: 1, xHead:true  },  // 第5線
+    'kick':         { key:'f/4', stem:-1, xHead:false },
+    'snare':        { key:'c/5', stem:-1, xHead:false },
+    'rimshot':      { key:'c/5', stem:-1, xHead:true  },
+    'tom10':        { key:'e/5', stem:-1, xHead:false },
+    'tom12':        { key:'d/5', stem:-1, xHead:false },
+    'tom16':        { key:'a/4', stem:-1, xHead:false },
+    'closed_hihat': { key:'g/5', stem: 1, xHead:true  },
+    'open_hihat':   { key:'a/5', stem: 1, xHead:true  },
+    'crash':        { key:'b/5', stem: 1, xHead:true  },
+    'ride':         { key:'f/5', stem: 1, xHead:true  },
   };
 
   // ============================================================
-  // ヘルパー: StaveNote を作る
+  // ヘルパー: StaveNote 生成
   // ============================================================
-  function makeNote(evList, stemDir, dur){
+  function makeNote(evList, stemDir){
     if(evList.length === 0){
-      // 休符: stem方向に合わせた位置
-      const restKey = stemDir === 1 ? 'd/5' : 'b/4';
-      return new StaveNote({ keys:[restKey], duration: DURR, stem_direction: stemDir });
+      // 休符は上声部=高め、下声部=低めに配置して重ならないよう
+      const rKey = stemDir===1 ? 'a/5' : 'e/4';
+      return new StaveNote({ keys:[rKey], duration:DURR, stem_direction:stemDir });
     }
-
-    // キー順序: 高い音から低い音 (stem up: 高い順, stem down: 低い順)
+    // 音の高い順にソート（VexFlowは高い音を先に書く）
     const sorted = [...evList].sort((a,b)=>{
-      const kA = DRUM[a.track]?.key||'b/4', kB = DRUM[b.track]?.key||'b/4';
-      // 簡易比較: アルファベット+数字を数値化
-      const val = k => {
-        const m = k.match(/([a-g])\/(\d)/i);
-        if(!m) return 0;
-        const notes = {c:0,d:1,e:2,f:3,g:4,a:5,b:6};
-        return parseInt(m[2])*7 + (notes[m[1].toLowerCase()]||0);
-      };
-      return stemDir===1 ? val(kB)-val(kA) : val(kA)-val(kB);
+      const pitch = k => { const m=k.match(/([a-g])\/(\d)/i); if(!m)return 0; return parseInt(m[2])*7+{c:0,d:1,e:2,f:3,g:4,a:5,b:6}[m[1].toLowerCase()]; };
+      return pitch(DRUM[b.track]?.key||'b/4') - pitch(DRUM[a.track]?.key||'b/4');
     });
-
-    const keys     = sorted.map(e => DRUM[e.track]?.key || 'b/4');
-    const noteHeads = sorted.map(e => ({
-      type: DRUM[e.track]?.xHead ? 'x' : 'default'
-    }));
-
-    const note = new StaveNote({
-      keys,
-      duration: dur,
-      stem_direction: stemDir,
-      clef: 'percussion',
-      note_heads: noteHeads,
-    });
-    return note;
+    const keys      = sorted.map(e => DRUM[e.track]?.key||'b/4');
+    const noteHeads = sorted.map(e => ({ type: DRUM[e.track]?.xHead ? 'x' : 'default' }));
+    return new StaveNote({ keys, duration:DUR, stem_direction:stemDir, clef:'percussion', note_heads:noteHeads });
   }
 
   // ============================================================
   // 小節ループ
   // ============================================================
   for(let m=0; m<measures; m++){
-    const spMeasure = 4 * spbVal;
-    const staveX    = STAVE_X0 + m * STAVE_W;
+    const spM    = 4 * spbVal;
+    const staveX = STAVE_X0 + m * STAVE_W;
 
+    // 五線
     const stave = new Stave(staveX, STAVE_Y, STAVE_W);
-    if(m===0){
-      stave.addClef('percussion');
-      stave.addTimeSignature('4/4');
-    }
+    if(m===0){ stave.addClef('percussion').addTimeSignature('4/4'); }
     stave.setContext(ctx).draw();
 
-    const upNotes   = [];
-    const downNotes = [];
-
-    for(let local=0; local<spMeasure; local++){
-      const abs    = m * spMeasure + local;
-      const evs    = state.pattern.events.filter(e => e.step === abs);
-      const upEvs  = evs.filter(e => (DRUM[e.track]?.stem??-1) === 1);
-      const dnEvs  = evs.filter(e => (DRUM[e.track]?.stem??-1) === -1);
-
-      upNotes.push(makeNote(upEvs,  1, DUR));
-      downNotes.push(makeNote(dnEvs, -1, DUR));
+    // ノート収集
+    const upNotes=[], dnNotes=[];
+    for(let local=0; local<spM; local++){
+      const abs  = m*spM + local;
+      const evs  = state.pattern.events.filter(e=>e.step===abs);
+      const upE  = evs.filter(e=>(DRUM[e.track]?.stem??-1)===1);
+      const dnE  = evs.filter(e=>(DRUM[e.track]?.stem??-1)===-1);
+      upNotes.push(makeNote(upE, 1));
+      dnNotes.push(makeNote(dnE,-1));
     }
 
     // Voice
-    const vUp   = new Voice({num_beats:4, beat_value:4}).setStrict(false);
-    const vDown = new Voice({num_beats:4, beat_value:4}).setStrict(false);
+    const vUp = new Voice({num_beats:4,beat_value:4}).setStrict(false);
+    const vDn = new Voice({num_beats:4,beat_value:4}).setStrict(false);
     vUp.addTickables(upNotes);
-    vDown.addTickables(downNotes);
+    vDn.addTickables(dnNotes);
 
-    // Beam 自動生成（グループ=1拍）
-    const bUp   = Beam.generateBeams(upNotes,   {stem_direction: 1});
-    const bDown = Beam.generateBeams(downNotes,  {stem_direction:-1});
+    // ★ Formatter を先に実行（Beam.generateBeams より前に必須）
+    const fmtW = STAVE_W - (m===0 ? 90 : 20);
+    new Formatter().joinVoices([vUp,vDn]).format([vUp,vDn], fmtW);
 
-    // フォーマット＆描画
-    const fmtW = STAVE_W - (m===0 ? 90 : 16);
-    new Formatter().joinVoices([vUp, vDown]).format([vUp, vDown], fmtW);
+    // ★ format後にBeam生成
+    const bUp = Beam.generateBeams(upNotes, {stem_direction: 1});
+    const bDn = Beam.generateBeams(dnNotes, {stem_direction:-1});
 
+    // 描画
     vUp.draw(ctx, stave);
-    vDown.draw(ctx, stave);
-    bUp.forEach(b => b.setContext(ctx).draw());
-    bDown.forEach(b => b.setContext(ctx).draw());
+    vDn.draw(ctx, stave);
+    bUp.forEach(b=>b.setContext(ctx).draw());
+    bDn.forEach(b=>b.setContext(ctx).draw());
   }
 }
 function renderAll(){

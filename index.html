@@ -8670,8 +8670,6 @@ function renderScore(){
     const DUR  = spbVal===1?'q': spbVal===2?'8': spbVal===4?'16':'32';
     const DURR = DUR + 'r';
 
-    // ドラム譜ピッチマッピング
-    // '/x' サフィックスで×符頭（VexFlow percussion記法）
     const DRUM = {
       'kick':         { key:'f/4',   stem:-1 },
       'snare':        { key:'c/5',   stem:-1 },
@@ -8703,12 +8701,9 @@ function renderScore(){
       const note = new StaveNote({
         keys, duration:DUR, stem_direction:stemDir, clef:'percussion'
       });
-      // open_hihat: noteheadCircleX
       sorted.forEach((ev, i) => {
-        if(DRUM[ev.track]?.key?.endsWith('/x') && note.noteHeads && note.noteHeads[i]){
-          if(ev.track === 'open_hihat'){
-            note.noteHeads[i].glyph_code = 'noteheadCircleX';
-          }
+        if(ev.track === 'open_hihat' && note.noteHeads && note.noteHeads[i]){
+          note.noteHeads[i].glyph_code = 'noteheadCircleX';
         }
       });
       return note;
@@ -8718,11 +8713,8 @@ function renderScore(){
     renderer.resize(SVG_W, SVG_H);
     const ctx = renderer.getContext();
 
-    // 白背景を設定
     const svgEl = scoreDiv.querySelector('svg');
-    if(svgEl){
-      svgEl.style.cssText = 'background:#fff; border-radius:8px; display:block;';
-    }
+    if(svgEl){ svgEl.style.cssText = 'background:#fff; border-radius:8px; display:block;'; }
 
     for(let m=0; m<measures; m++){
       const spM    = 4 * spbVal;
@@ -8761,7 +8753,7 @@ function renderScore(){
     showError(e.message + '\n' + (e.stack||'').split('\n').slice(0,5).join('\n'));
   }
 }
-
+function renderAll(){
   renderControls();
   renderGrid();
   renderScore();

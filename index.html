@@ -8855,58 +8855,281 @@ function playTone(time, f1, f2, dur, vol, wave='sine', reverb=0, attack=0.001){
   o.start(time);
   o.stop(time + dur + 0.02);
 }
+
+// ============================================================
+// 音源プリセット定義
+// 各パートにプリセットを個別設定できる
+// ============================================================
+// パートごとの選択中プリセット
+var _trackPreset = {};  // { trackId: presetId }
+
+// プリセット定義: 各楽器の発音パラメータセット
+// tone(time, f1, f2, dur, vol, wave, reverb, attack)
+// noise(time, dur, filterHz, vol, reverb, decay)
+var SYNTH_PRESETS = {
+
+  // ── 生ドラム (Acoustic) ─────────────────────────────────
+  'acoustic': {
+    label: '生ドラム',
+    kick: function(t,v){
+      playTone(t, 65, 28, 0.55, v*1.1, 'sine', 20, 0.002);
+      playTone(t, 120, 45, 0.12, v*0.4, 'sine', 5, 0.001);
+      playNoise(t, 0.04, 180, v*0.15, 5, 0.035);
+    },
+    snare: function(t,v){
+      playTone(t, 220, 160, 0.08, v*0.5, 'sine', 8, 0.001);
+      playTone(t, 360, 200, 0.04, v*0.3, 'sine', 4, 0.001);
+      playNoise(t, 0.22, 3500, v*1.0, 12, 0.20);
+      playNoise(t, 0.22, 800, v*0.3, 6, 0.12);
+    },
+    rimshot: function(t,v){
+      playTone(t, 1600, 800, 0.022, v*0.85, 'sine', 4);
+      playTone(t, 3000, 1500, 0.015, v*0.4, 'sine', 2);
+      playNoise(t, 0.015, 4200, v*0.5, 1, 0.012);
+    },
+    tom10: function(t,v){
+      playTone(t, 280, 130, 0.32, v*1.0, 'sine', 15, 0.002);
+      playNoise(t, 0.10, 600, v*0.28, 6, 0.08);
+    },
+    tom12: function(t,v){
+      playTone(t, 210, 95, 0.38, v*1.0, 'sine', 18, 0.002);
+      playNoise(t, 0.12, 450, v*0.28, 8, 0.10);
+    },
+    tom16: function(t,v){
+      playTone(t, 160, 68, 0.45, v*1.05, 'sine', 20, 0.002);
+      playNoise(t, 0.14, 350, v*0.28, 10, 0.12);
+    },
+    closed_hihat: function(t,v){
+      playNoise(t, 0.06, 10000, v*0.22, 1, 0.045);
+      playTone(t, 8000, 6000, 0.015, v*0.05, 'square', 0);
+    },
+    open_hihat: function(t,v){
+      playNoise(t, 0.35, 9000, v*0.22, 4, 0.30);
+      playTone(t, 7000, 5000, 0.10, v*0.04, 'square', 2);
+    },
+    crash: function(t,v){
+      playNoise(t, 0.8, 6000, v*0.28, 22, 0.65);
+      playTone(t, 4500, 2800, 0.22, v*0.07, 'triangle', 12);
+    },
+    ride: function(t,v){
+      playNoise(t, 0.20, 7000, v*0.18, 5, 0.16);
+      playTone(t, 3600, 2800, 0.14, v*0.09, 'triangle', 3);
+    },
+    cup: function(t,v){
+      playNoise(t, 0.15, 8500, v*0.18, 2, 0.12);
+      playTone(t, 5500, 4500, 0.10, v*0.12, 'triangle', 1);
+    },
+  },
+
+  // ── 電子ドラム (Electronic) ─────────────────────────────
+  'electronic': {
+    label: '電子ドラム',
+    kick: function(t,v){
+      playTone(t, 80, 30, 0.30, v*1.2, 'sine', 0, 0.001);
+      playTone(t, 160, 60, 0.08, v*0.5, 'sine', 0, 0.001);
+      playNoise(t, 0.01, 300, v*0.25, 0, 0.008);
+    },
+    snare: function(t,v){
+      playTone(t, 250, 180, 0.06, v*0.6, 'square', 0, 0.001);
+      playNoise(t, 0.12, 5000, v*1.0, 0, 0.10);
+    },
+    rimshot: function(t,v){
+      playTone(t, 2000, 1000, 0.018, v*0.9, 'square', 0);
+      playNoise(t, 0.010, 5000, v*0.5, 0, 0.008);
+    },
+    tom10: function(t,v){
+      playTone(t, 320, 160, 0.20, v*1.1, 'sine', 0, 0.001);
+      playNoise(t, 0.04, 800, v*0.2, 0, 0.03);
+    },
+    tom12: function(t,v){
+      playTone(t, 240, 120, 0.22, v*1.1, 'sine', 0, 0.001);
+      playNoise(t, 0.04, 600, v*0.2, 0, 0.03);
+    },
+    tom16: function(t,v){
+      playTone(t, 180, 80, 0.25, v*1.1, 'sine', 0, 0.001);
+      playNoise(t, 0.04, 450, v*0.2, 0, 0.03);
+    },
+    closed_hihat: function(t,v){
+      playNoise(t, 0.04, 12000, v*0.28, 0, 0.030);
+    },
+    open_hihat: function(t,v){
+      playNoise(t, 0.20, 11000, v*0.26, 0, 0.18);
+    },
+    crash: function(t,v){
+      playNoise(t, 0.5, 8000, v*0.30, 0, 0.40);
+      playTone(t, 5000, 3000, 0.15, v*0.08, 'sawtooth', 0);
+    },
+    ride: function(t,v){
+      playNoise(t, 0.14, 9000, v*0.20, 0, 0.12);
+      playTone(t, 4000, 3200, 0.10, v*0.10, 'square', 0);
+    },
+    cup: function(t,v){
+      playNoise(t, 0.10, 10000, v*0.20, 0, 0.08);
+      playTone(t, 6000, 5000, 0.08, v*0.12, 'square', 0);
+    },
+  },
+
+  // ── ロック (Rock) ──────────────────────────────────────
+  'rock': {
+    label: 'ロック',
+    kick: function(t,v){
+      playTone(t, 75, 32, 0.35, v*1.15, 'sine', 5, 0.001);
+      playTone(t, 140, 55, 0.10, v*0.45, 'sine', 2, 0.001);
+      playNoise(t, 0.03, 250, v*0.20, 2, 0.025);
+    },
+    snare: function(t,v){
+      playTone(t, 195, 145, 0.07, v*0.55, 'sine', 5, 0.001);
+      playNoise(t, 0.18, 4000, v*1.05, 8, 0.16);
+      playNoise(t, 0.10, 900, v*0.35, 3, 0.08);
+    },
+    rimshot: function(t,v){
+      playTone(t, 1700, 850, 0.020, v*0.9, 'sine', 3);
+      playNoise(t, 0.012, 4500, v*0.55, 1, 0.010);
+    },
+    tom10: function(t,v){
+      playTone(t, 260, 115, 0.30, v*1.05, 'sine', 10, 0.002);
+      playNoise(t, 0.10, 550, v*0.30, 5, 0.08);
+    },
+    tom12: function(t,v){
+      playTone(t, 200, 88, 0.35, v*1.05, 'sine', 12, 0.002);
+      playNoise(t, 0.12, 420, v*0.30, 6, 0.10);
+    },
+    tom16: function(t,v){
+      playTone(t, 155, 62, 0.42, v*1.08, 'sine', 14, 0.002);
+      playNoise(t, 0.14, 330, v*0.32, 8, 0.12);
+    },
+    closed_hihat: function(t,v){
+      playNoise(t, 0.055, 9500, v*0.25, 1, 0.042);
+      playTone(t, 6500, 4800, 0.018, v*0.06, 'square', 0);
+    },
+    open_hihat: function(t,v){
+      playNoise(t, 0.28, 8800, v*0.24, 3, 0.24);
+      playTone(t, 6200, 4000, 0.09, v*0.05, 'square', 1);
+    },
+    crash: function(t,v){
+      playNoise(t, 0.65, 5800, v*0.32, 20, 0.55);
+      playTone(t, 4300, 2700, 0.20, v*0.08, 'triangle', 12);
+    },
+    ride: function(t,v){
+      playNoise(t, 0.22, 6800, v*0.20, 6, 0.18);
+      playTone(t, 3500, 2700, 0.14, v*0.10, 'triangle', 3);
+    },
+    cup: function(t,v){
+      playNoise(t, 0.16, 8000, v*0.20, 2, 0.13);
+      playTone(t, 5300, 4300, 0.10, v*0.13, 'triangle', 1);
+    },
+  },
+
+  // ── ジャズ (Jazz) ──────────────────────────────────────
+  'jazz': {
+    label: 'ジャズ',
+    kick: function(t,v){
+      playTone(t, 58, 35, 0.25, v*0.85, 'sine', 8, 0.005);
+      playNoise(t, 0.025, 150, v*0.10, 3, 0.020);
+    },
+    snare: function(t,v){
+      playTone(t, 180, 140, 0.06, v*0.45, 'sine', 10, 0.003);
+      playNoise(t, 0.18, 2800, v*0.80, 15, 0.16);
+    },
+    rimshot: function(t,v){
+      playTone(t, 1400, 700, 0.020, v*0.75, 'sine', 6);
+      playNoise(t, 0.012, 3500, v*0.45, 2, 0.010);
+    },
+    tom10: function(t,v){
+      playTone(t, 250, 125, 0.28, v*0.90, 'sine', 12, 0.003);
+      playNoise(t, 0.08, 500, v*0.22, 5, 0.07);
+    },
+    tom12: function(t,v){
+      playTone(t, 195, 90, 0.32, v*0.90, 'sine', 14, 0.003);
+      playNoise(t, 0.10, 380, v*0.22, 6, 0.09);
+    },
+    tom16: function(t,v){
+      playTone(t, 148, 65, 0.38, v*0.92, 'sine', 16, 0.003);
+      playNoise(t, 0.12, 300, v*0.24, 8, 0.11);
+    },
+    closed_hihat: function(t,v){
+      playNoise(t, 0.07, 8000, v*0.20, 4, 0.060);
+      playTone(t, 5500, 4000, 0.025, v*0.07, 'triangle', 2);
+    },
+    open_hihat: function(t,v){
+      playNoise(t, 0.45, 7500, v*0.20, 8, 0.40);
+      playTone(t, 5200, 3500, 0.12, v*0.06, 'triangle', 5);
+    },
+    crash: function(t,v){
+      playNoise(t, 1.0, 5200, v*0.24, 30, 0.85);
+      playTone(t, 3800, 2500, 0.28, v*0.07, 'triangle', 18);
+    },
+    ride: function(t,v){
+      playNoise(t, 0.30, 6200, v*0.18, 10, 0.26);
+      playTone(t, 3200, 2600, 0.18, v*0.11, 'triangle', 6);
+    },
+    cup: function(t,v){
+      playNoise(t, 0.20, 7500, v*0.18, 4, 0.16);
+      playTone(t, 5000, 4200, 0.12, v*0.14, 'triangle', 2);
+    },
+  },
+
+  // ── 808 (TR-808風) ─────────────────────────────────────
+  '808': {
+    label: 'TR-808',
+    kick: function(t,v){
+      playTone(t, 55, 28, 0.80, v*1.3, 'sine', 0, 0.001);
+      playTone(t, 110, 55, 0.10, v*0.4, 'sine', 0, 0.001);
+      playNoise(t, 0.008, 200, v*0.30, 0, 0.006);
+    },
+    snare: function(t,v){
+      playTone(t, 200, 160, 0.05, v*0.5, 'square', 0, 0.001);
+      playNoise(t, 0.10, 6000, v*1.1, 0, 0.08);
+    },
+    rimshot: function(t,v){
+      playTone(t, 2200, 1100, 0.015, v*1.0, 'square', 0);
+      playNoise(t, 0.008, 6000, v*0.6, 0, 0.006);
+    },
+    tom10: function(t,v){
+      playTone(t, 350, 180, 0.18, v*1.1, 'sine', 0, 0.001);
+    },
+    tom12: function(t,v){
+      playTone(t, 260, 130, 0.20, v*1.1, 'sine', 0, 0.001);
+    },
+    tom16: function(t,v){
+      playTone(t, 190, 90, 0.22, v*1.1, 'sine', 0, 0.001);
+    },
+    closed_hihat: function(t,v){
+      playNoise(t, 0.03, 12000, v*0.35, 0, 0.025);
+    },
+    open_hihat: function(t,v){
+      playNoise(t, 0.15, 11000, v*0.32, 0, 0.13);
+    },
+    crash: function(t,v){
+      playNoise(t, 0.40, 9000, v*0.35, 0, 0.32);
+    },
+    ride: function(t,v){
+      playNoise(t, 0.12, 10000, v*0.25, 0, 0.10);
+      playTone(t, 4500, 3500, 0.08, v*0.12, 'square', 0);
+    },
+    cup: function(t,v){
+      playNoise(t, 0.08, 11000, v*0.25, 0, 0.06);
+      playTone(t, 6000, 5000, 0.06, v*0.14, 'square', 0);
+    },
+  },
+};
+
+// デフォルトプリセット（全パート）
+var _globalPreset = 'acoustic';
+
+function getPresetForTrack(trackId){
+  return SYNTH_PRESETS[_trackPreset[trackId] || _globalPreset] || SYNTH_PRESETS['acoustic'];
+}
+
 function playTrackAt(trackId, time, velocityScale=1){
   const tr = TRACKS.find(t=>t.id===trackId);
   if(!tr) return;
   const v = Math.max(0.05, Math.min(1.2, velocityScale));
-  switch(trackId){
-    case 'kick':
-      playTone(time, 150, 48, 0.18, v*0.95, 'sine', 10);
-      playNoise(time, 0.018, 900, v*0.08, 0, 0.012);
-      break;
-    case 'snare':
-      playTone(time, 200, 80, 0.12, v*0.7, 'sine', 15);
-      playNoise(time, 0.14, 2000, v*0.9, 15, 0.14);
-      break;
-    case 'rimshot':
-      playTone(time, 1800, 900, 0.025, v*0.9, 'sine', 8);
-      playTone(time, 3200, 1600, 0.018, v*0.4, 'sine', 8);
-      playTone(time, 5000, 2500, 0.012, v*0.2, 'sine', 8);
-      playNoise(time, 0.018, 4000, v*0.6, 2, 0.015);
-      break;
-    case 'tom10':
-      playTone(time, 300, 120, 0.28, v*1.0, 'sine', 18);
-      playNoise(time, 0.12, 500, v*0.25, 8, 0.08);
-      break;
-    case 'tom12':
-      playTone(time, 230, 90, 0.32, v*1.0, 'sine', 20);
-      playNoise(time, 0.14, 400, v*0.26, 10, 0.1);
-      break;
-    case 'tom16':
-      playTone(time, 180, 65, 0.38, v*1.05, 'sine', 22);
-      playNoise(time, 0.16, 350, v*0.28, 12, 0.12);
-      break;
-    case 'closed_hihat':
-      playNoise(time, 0.05, 9000, v*0.23, 3, 0.04);
-      playTone(time, 6000, 4200, 0.02, v*0.06, 'square', 1);
-      break;
-    case 'open_hihat':
-      playNoise(time, 0.22, 8200, v*0.22, 6, 0.18);
-      playTone(time, 5800, 3600, 0.08, v*0.05, 'square', 3);
-      break;
-    case 'crash':
-      playNoise(time, 0.5, 5600, v*0.25, 18, 0.42);
-      playTone(time, 4200, 2800, 0.18, v*0.06, 'triangle', 10);
-      break;
-    case 'ride':
-      playNoise(time, 0.18, 6400, v*0.18, 7, 0.14);
-      playTone(time, 3300, 2500, 0.12, v*0.08, 'triangle', 5);
-      break;
-    case 'cup':
-      playNoise(time, 0.15, 7800, v*0.18, 3, 0.12);
-      playTone(time, 5200, 4200, 0.10, v*0.10, 'triangle', 3);
-      break;
-  }
+  const preset = getPresetForTrack(trackId);
+  const fn = preset[trackId];
+  if(fn){ fn(time, v); return; }
+  // fallback（未定義楽器）
+  playNoise(time, 0.05, 1000, v*0.2, 0, 0.04);
 }
 function fireWithOrn(trackId, step, time, baseVel){
   // カスタムサンプルがあれば優先再生
@@ -9234,19 +9457,85 @@ var _S={},_R={mr:null,chunks:[],track:null};
 function openSampler(){
   var body=document.getElementById('samplerBody');
   body.innerHTML='';
-  var bs='min-height:32px;padding:0 8px;border-radius:8px;border:1px solid rgba(160,160,255,0.3);background:#23234a;color:#f0f0ff;cursor:pointer;font-size:.8rem;white-space:nowrap';
+  var bs='min-height:30px;padding:0 8px;border-radius:6px;border:1px solid rgba(160,160,255,0.3);background:#23234a;color:#f0f0ff;cursor:pointer;font-size:.8rem;white-space:nowrap';
+  var presetIds=Object.keys(SYNTH_PRESETS);
+
+  // グローバルプリセット選択
+  var gRow=document.createElement('div');
+  gRow.style.cssText='padding:10px 12px;background:#0f0f28;border-radius:10px;margin-bottom:8px;border:1px solid rgba(255,230,109,0.2)';
+  var gSel='<div style="font-size:.82rem;color:#ffe66d;font-weight:700;margin-bottom:8px">&#127925; 全体プリセット</div>';
+  gSel+='<div style="display:flex;gap:6px;flex-wrap:wrap">';
+  presetIds.forEach(function(pid){
+    var active=(_globalPreset===pid&&Object.keys(_trackPreset).length===0);
+    var gpid=JSON.stringify(pid);
+    gSel+='<button onclick="setGlobalPreset('+gpid+')" style="'+bs+
+      (active?';background:#4a3a00;border-color:#ffe66d;color:#ffe66d':'')+
+      '">'+SYNTH_PRESETS[pid].label+'</button>';
+  });
+  gSel+='</div>';
+  gRow.innerHTML=gSel;
+  body.appendChild(gRow);
+
+  // パートごとの設定
+  var hdr=document.createElement('div');
+  hdr.style.cssText='font-size:.78rem;color:#9090b8;padding:4px 2px 6px;letter-spacing:.06em';
+  hdr.textContent='パート別設定（個別に上書き可能）';
+  body.appendChild(hdr);
+
   TRACKS.forEach(function(tr){
-    var s=_S[tr.id],row=document.createElement('div');
-    row.style.cssText='display:grid;grid-template-columns:90px 1fr auto auto;gap:8px;align-items:center;padding:8px 10px;background:#1a1a30;border-radius:10px';
+    var s=_S[tr.id];
+    var curP=_trackPreset[tr.id]||null;
+    var row=document.createElement('div');
+    row.style.cssText='padding:8px 10px;background:#1a1a30;border-radius:10px;margin-bottom:4px';
     var tid=JSON.stringify(tr.id);
-    row.innerHTML='<span style="font-weight:700;font-size:.88rem;color:'+tr.accent+'">'+tr.label+'</span>'+
-      '<span id="src_'+tr.id+'" style="font-size:.78rem;color:#9090b8;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+(s?'OK '+s.name:'シンセ')+'</span>'+
-      '<button style="'+bs+'" onclick="loadSF('+tid+')">&#128193;</button>'+
-      '<button id="rec_'+tr.id+'" style="'+bs+'" onclick="togRec('+tid+')">&#127897;</button>';
-    if(s){var b=document.createElement('button');b.style.cssText=bs+';grid-column:2/5';b.textContent='x クリア';b.onclick=function(){delete _S[tr.id];openSampler();};row.appendChild(b);}
+
+    // パート名 + プリセット選択
+    var inner='<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">';
+    inner+='<span style="font-weight:700;font-size:.88rem;color:'+tr.accent+';min-width:80px">'+tr.label+'</span>';
+    inner+='<div style="display:flex;gap:4px;flex-wrap:wrap">';
+    // 「グローバルに従う」ボタン
+    inner+='<button onclick="clearTrackPreset('+tid+')" style="'+bs+
+      (!curP?';background:#1a3a00;border-color:#a8ff78;color:#a8ff78':'')+
+      '">全体に従う</button>';
+    presetIds.forEach(function(pid){
+      var active=(curP===pid);
+      var ppid=JSON.stringify(pid);
+      inner+='<button onclick="setTrackPreset('+tid+','+ppid+')" style="'+bs+
+        (active?';background:#4a3a00;border-color:#ffe66d;color:#ffe66d':'')+
+        '">'+SYNTH_PRESETS[pid].label+'</button>';
+    });
+    inner+='</div></div>';
+
+    // ファイル/録音ボタン
+    inner+='<div style="display:flex;gap:6px;align-items:center">';
+    inner+='<span id="src_'+tr.id+'" style="font-size:.75rem;color:#9090b8;flex:1">'+(s?'&#128193; '+s.name:'シンセ音源')+'</span>';
+    inner+='<button style="'+bs+'" onclick="loadSF('+tid+')">&#128193; 読込</button>';
+    inner+='<button id="rec_'+tr.id+'" style="'+bs+'" onclick="togRec('+tid+')">&#127897; 録音</button>';
+    if(s){inner+='<button style="'+bs+'" onclick="clearSample('+tid+')">&#10005;</button>';}
+    inner+='</div>';
+
+    row.innerHTML=inner;
     body.appendChild(row);
   });
   document.getElementById('samplerModal').style.display='flex';
+}
+
+function setGlobalPreset(pid){
+  _globalPreset=pid;
+  _trackPreset={};  // 個別設定をリセット
+  openSampler();
+}
+function setTrackPreset(tid,pid){
+  _trackPreset[tid]=pid;
+  openSampler();
+}
+function clearTrackPreset(tid){
+  delete _trackPreset[tid];
+  openSampler();
+}
+function clearSample(tid){
+  delete _S[tid];
+  openSampler();
 }
 function loadSF(tid){
   var inp=document.createElement('input');inp.type='file';inp.accept='audio/*';

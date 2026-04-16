@@ -8417,9 +8417,6 @@ vexflow/build/cjs/vexflow.js:
 
 <script>
 const STORAGE_KEY = 'tatatan-inspired-drum-notation';
-const samples = {};
-let recState = { mediaRecorder:null, chunks:[], targetTrack:null };
-let velPopState = { track:null, step:null };
 const GRID_MODES = {
   q:   { label:'4分',  stepsPerBeat:1 },
   e:   { label:'8分',  stepsPerBeat:2 },
@@ -8441,13 +8438,11 @@ const ORNAMENTS = [
   { id:'buzz',  label:'バズロール', short:'BZ' }
 ];
 const TRACKS = [
-  // upper voice（上向き符幹）: シンバル・HH類 → グリッド上部
   { id:'crash',       label:'Crash',      short:'CR', accent:'#c77dff', group:'cymbal', scoreY:46,  voice:'upper', midiNote:49, xHead:true },
   { id:'ride',        label:'Ride',       short:'RD', accent:'#9b5de5', group:'cymbal', scoreY:53,  voice:'upper', midiNote:51, xHead:true },
   { id:'cup',         label:'Ride Cup',   short:'CU', accent:'#7b4de5', group:'cymbal', scoreY:53,  voice:'upper', midiNote:53, xHead:true },
   { id:'open_hihat',  label:'Open HH',    short:'OH', accent:'#ffd166', group:'hihat',  scoreY:53,  voice:'upper', midiNote:46, xHead:true },
   { id:'closed_hihat',label:'Closed HH',  short:'CH', accent:'#ffe66d', group:'hihat',  scoreY:60,  voice:'upper', midiNote:42, xHead:true },
-  // lower voice（下向き符幹）: タム・スネア・キック → グリッド下部
   { id:'tom10',       label:'Tom 10"',    short:'T1', accent:'#f87171', group:'tom',    scoreY:81,  voice:'lower', midiNote:48 },
   { id:'tom12',       label:'Tom 12"',    short:'T2', accent:'#fb923c', group:'tom',    scoreY:88,  voice:'lower', midiNote:47 },
   { id:'tom16',       label:'Floor Tom',  short:'FT', accent:'#fbbf24', group:'tom',    scoreY:116, voice:'lower', midiNote:43 },
@@ -8682,112 +8677,83 @@ function renderControls(){
   });
 }
 function renderScore(){
-  var scoreDiv = document.getElementById('scoreDiv');
+  const scoreDiv = document.getElementById('scoreDiv');
   function showError(msg){
-    scoreDiv.innerHTML = '<div style="color:red;padding:8px;font-size:12px;background:#fff;border-radius:8px"><b>譜面エラー:</b><br><pre style="white-space:pre-wrap">'+msg+'</pre></div>';
+    scoreDiv.innerHTML = '<div style="color:red;padding:8px;font-size:12px;background:#fff;border-radius:8px"><b>譜面エラー:</b><br><pre>'+msg+'</pre></div>';
   }
   try {
-    if(typeof Vex === 'undefined'){ showError('VexFlowが読み込まれていません'); return; }
-    var VF=Vex.Flow, Renderer=VF.Renderer, Stave=VF.Stave, StaveNote=VF.StaveNote;
-    var Voice=VF.Voice, Formatter=VF.Formatter, Beam=VF.Beam, Articulation=VF.Articulation;
-    var GraceNote=VF.GraceNote, GraceNoteGroup=VF.GraceNoteGroup;
+    if(typeof Vex==='undefined'){ showError('VexFlowが読み込まれていません'); return; }
+    const VF=Vex.Flow, Renderer=VF.Renderer, Stave=VF.Stave, StaveNote=VF.StaveNote;
+    const Voice=VF.Voice, Formatter=VF.Formatter, Beam=VF.Beam, Articulation=VF.Articulation;
+    const GraceNote=VF.GraceNote, GraceNoteGroup=VF.GraceNoteGroup;
     if(!Renderer||!Stave||!StaveNote){ showError('VexFlow APIが見つかりません'); return; }
 
-    scoreDiv.innerHTML = '';
-    var spbVal=spb(), measures=state.pattern.measures;
-    var STAVE_W=300, STAVE_X0=16, STAVE_Y=20;
-    var SVG_W=STAVE_X0+measures*STAVE_W+24, SVG_H=160;
-    var DUR=spbVal===1?'q':spbVal===2?'8':spbVal===4?'16':'32';
-    var DURR=DUR+'r';
+    scoreDiv.innerHTML='';
+    const spbVal=spb(), measures=state.pattern.measures;
+    const STAVE_W=300, STAVE_X0=16, STAVE_Y=20;
+    const SVG_W=STAVE_X0+measures*STAVE_W+24, SVG_H=160;
+    const DUR=spbVal===1?'q':spbVal===2?'8':spbVal===4?'16':'32';
 
-    // 楽器定義: key末尾/x=×符頭, circleX=⊗, diamond=◆(Cup)
-    var DRUM = {
-      'crash':        { key:'a/5/x', stem: 1, circleX:true  },
-      'ride':         { key:'f/5/x', stem: 1                },
-      'cup':          { key:'f/5/x', stem: 1, diamond:true  },
-      'open_hihat':   { key:'g/5/x', stem: 1, circleX:true, artOpen:true },
-      'closed_hihat': { key:'f/5/x', stem: 1                },
-      'snare':        { key:'b/4',   stem:-1                },
-      'rimshot':      { key:'b/4/x', stem:-1                },
-      'tom10':        { key:'c/5',   stem:-1                },
-      'tom12':        { key:'a/4',   stem:-1                },
-      'tom16':        { key:'g/4',   stem:-1                },
-      'kick':         { key:'d/4',   stem:-1                },
+    const DRUM={
+      crash:       {key:'a/5/x',stem:1,circleX:true},
+      ride:        {key:'f/5/x',stem:1},
+      cup:         {key:'f/5/x',stem:1,diamond:true},
+      open_hihat:  {key:'g/5/x',stem:1,circleX:true,artOpen:true},
+      closed_hihat:{key:'f/5/x',stem:1},
+      snare:       {key:'b/4',  stem:-1},
+      rimshot:     {key:'b/4/x',stem:-1},
+      tom10:       {key:'c/5',  stem:-1},
+      tom12:       {key:'a/4',  stem:-1},
+      tom16:       {key:'g/4',  stem:-1},
+      kick:        {key:'d/4',  stem:-1},
     };
 
-    function pitchVal(k){
-      var m=k.match(/([a-g])\/(\d)/i);
-      if(!m) return 0;
-      return parseInt(m[2])*7+{c:0,d:1,e:2,f:3,g:4,a:5,b:6}[m[1].toLowerCase()];
-    }
+    function pv(k){ const m=k.match(/([a-g])\/(\d)/i); if(!m)return 0; return parseInt(m[2])*7+{c:0,d:1,e:2,f:3,g:4,a:5,b:6}[m[1].toLowerCase()]; }
 
-    function buildNotes(stepSlots, stemDir){
-      var spM=stepSlots.length, notes=[];
-      var durTable=[
-        {dur:'q',  steps:Math.round(4*spbVal/4)},
-        {dur:'8',  steps:Math.round(2*spbVal/4)},
-        {dur:'16', steps:Math.round(1*spbVal/4)},
-      ].filter(function(d){ return d.steps>=1; });
-
-      var i=0;
+    function buildNotes(slots, stemDir){
+      const spM=slots.length, notes=[];
+      const DT=[{dur:'q',st:Math.round(4*spbVal/4)},{dur:'8',st:Math.round(2*spbVal/4)},{dur:'16',st:Math.round(spbVal/4)}].filter(d=>d.st>=1);
+      let i=0;
       while(i<spM){
-        var nextEv=spM;
-        for(var j=i+1;j<spM;j++){ if(stepSlots[j]&&stepSlots[j].length){ nextEv=j; break; } }
-        var gap=nextEv-i;
-
-        if(stepSlots[i]&&stepSlots[i].length){
-          var chosen=durTable[durTable.length-1];
-          for(var di=0;di<durTable.length;di++){ if(durTable[di].steps<=gap){ chosen=durTable[di]; break; } }
-          var evList=stepSlots[i];
-          var sorted=evList.slice().sort(function(a,b){
-            return pitchVal(DRUM[b.track]?DRUM[b.track].key:'b/4')-pitchVal(DRUM[a.track]?DRUM[a.track].key:'b/4');
-          });
-          var keys=sorted.map(function(e){ return DRUM[e.track]?DRUM[e.track].key:'b/4'; });
-          var note=new StaveNote({keys:keys, duration:chosen.dur, stem_direction:stemDir, clef:'percussion'});
-
-          // 符頭とアーティキュレーション
-          sorted.forEach(function(ev,ki){
-            var def=DRUM[ev.track]; if(!def) return;
+        let nx=spM; for(let j=i+1;j<spM;j++){if(slots[j]&&slots[j].length){nx=j;break;}}
+        const gap=nx-i;
+        if(slots[i]&&slots[i].length){
+          let ch=DT[DT.length-1]; for(const d of DT){if(d.st<=gap){ch=d;break;}}
+          const evs=slots[i], sorted=[...evs].sort((a,b)=>pv(DRUM[b.track]?.key||'b/4')-pv(DRUM[a.track]?.key||'b/4'));
+          const keys=sorted.map(e=>DRUM[e.track]?.key||'b/4');
+          const note=new StaveNote({keys,duration:ch.dur,stem_direction:stemDir,clef:'percussion'});
+          sorted.forEach((ev,ki)=>{
+            const def=DRUM[ev.track]; if(!def)return;
             if(note.noteHeads&&note.noteHeads[ki]){
               if(def.circleX) note.noteHeads[ki].glyph_code='noteheadCircleX';
               if(def.diamond) note.noteHeads[ki].glyph_code='noteheadDiamondBlack';
             }
-            if(def.artOpen&&Articulation){ try{ note.addModifier(new Articulation('ao'),ki); }catch(e){} }
+            if(def.artOpen&&Articulation){try{note.addModifier(new Articulation('ao'),ki);}catch(e){}}
           });
-
-          // 装飾音符（ornament）
-          var repEv=sorted[0];
-          if(repEv){
-            var absStep=repEv.step!==undefined?repEv.step:i;
-            var ornType=getOrn(repEv.track,absStep);
-            if(ornType==='accent'&&Articulation){ try{ note.addModifier(new Articulation('a>'),0); }catch(e){} }
-            if((ornType==='flam'||ornType==='drag')&&GraceNote&&GraceNoteGroup){
+          const rep=sorted[0];
+          if(rep){
+            const absStep=rep.step!==undefined?rep.step:i;
+            const orn=getOrn(rep.track,absStep);
+            if(orn==='accent'&&Articulation){try{note.addModifier(new Articulation('a>'),0);}catch(e){}}
+            if((orn==='flam'||orn==='drag')&&GraceNote&&GraceNoteGroup){
               try{
-                var cnt=ornType==='flam'?1:2;
-                var gArr=[];
-                for(var gi=0;gi<cnt;gi++){
-                  var def2=DRUM[repEv.track]||{key:'b/4'};
-                  var gn=new GraceNote({keys:[def2.key],duration:'8',stem_direction:stemDir,slash:cnt===1});
-                  gArr.push(gn);
+                const cnt=orn==='flam'?1:2, gArr=[];
+                for(let gi=0;gi<cnt;gi++){
+                  const def2=DRUM[rep.track]||{key:'b/4'};
+                  gArr.push(new GraceNote({keys:[def2.key],duration:'8',stem_direction:stemDir,slash:cnt===1}));
                 }
                 note.addModifier(new GraceNoteGroup(gArr,true),0);
               }catch(e){}
             }
-            if(ornType==='ghost'){
-              try{ sorted.forEach(function(_,ki){ note.setKeyStyle(ki,{fillStyle:'rgba(0,0,0,0.3)'}); }); }catch(e){}
-            }
+            if(orn==='ghost'){try{sorted.forEach((_,ki)=>note.setKeyStyle(ki,{fillStyle:'rgba(0,0,0,0.3)'}));}catch(e){}}
           }
-
-          notes.push(note);
-          i+=chosen.steps;
+          notes.push(note); i+=ch.st;
         } else {
-          var rem=gap;
+          let rem=gap;
           while(rem>0){
-            var ch2=durTable[durTable.length-1];
-            for(var di2=0;di2<durTable.length;di2++){ if(durTable[di2].steps<=rem){ ch2=durTable[di2]; break; } }
-            var rKey=stemDir===1?'a/5':'e/4';
-            notes.push(new StaveNote({keys:[rKey],duration:ch2.dur+'r',stem_direction:stemDir}));
-            rem-=ch2.steps;
+            let ch=DT[DT.length-1]; for(const d of DT){if(d.st<=rem){ch=d;break;}}
+            notes.push(new StaveNote({keys:[stemDir===1?'a/5':'e/4'],duration:ch.dur+'r',stem_direction:stemDir}));
+            rem-=ch.st;
           }
           i+=gap;
         }
@@ -8795,41 +8761,36 @@ function renderScore(){
       return notes;
     }
 
-    var renderer=new Renderer(scoreDiv,Renderer.Backends.SVG);
+    const renderer=new Renderer(scoreDiv,Renderer.Backends.SVG);
     renderer.resize(SVG_W,SVG_H);
-    var ctx=renderer.getContext();
-    var svgEl=scoreDiv.querySelector('svg');
+    const ctx=renderer.getContext();
+    const svgEl=scoreDiv.querySelector('svg');
     if(svgEl) svgEl.style.cssText='background:#fff;border-radius:8px;display:block;';
 
-    for(var m=0;m<measures;m++){
-      var spM2=4*spbVal;
-      var staveX=STAVE_X0+m*STAVE_W;
-      var stave=new Stave(staveX,STAVE_Y,STAVE_W);
+    for(let m=0;m<measures;m++){
+      const spM=4*spbVal, staveX=STAVE_X0+m*STAVE_W;
+      const stave=new Stave(staveX,STAVE_Y,STAVE_W);
       if(m===0) stave.addClef('percussion').addTimeSignature('4/4');
       stave.setContext(ctx).draw();
-
-      var upSlots=[],dnSlots=[];
-      for(var loc=0;loc<spM2;loc++){
-        var abs=m*spM2+loc;
-        var evs=state.pattern.events.filter(function(e){ return e.step===abs; });
-        upSlots.push(evs.filter(function(e){ return (DRUM[e.track]?DRUM[e.track].stem:-1)===1; }).map(function(e){ return Object.assign({},e,{step:abs}); }));
-        dnSlots.push(evs.filter(function(e){ return (DRUM[e.track]?DRUM[e.track].stem:-1)===-1; }).map(function(e){ return Object.assign({},e,{step:abs}); }));
+      const up=[],dn=[];
+      for(let loc=0;loc<spM;loc++){
+        const abs=m*spM+loc;
+        const evs=state.pattern.events.filter(e=>e.step===abs);
+        up.push(evs.filter(e=>(DRUM[e.track]?.stem??-1)===1).map(e=>({...e,step:abs})));
+        dn.push(evs.filter(e=>(DRUM[e.track]?.stem??-1)===-1).map(e=>({...e,step:abs})));
       }
-
-      var upNotes=buildNotes(upSlots,1), dnNotes=buildNotes(dnSlots,-1);
-      var vUp=new Voice({num_beats:4,beat_value:4}).setStrict(false);
-      var vDn=new Voice({num_beats:4,beat_value:4}).setStrict(false);
-      vUp.addTickables(upNotes); vDn.addTickables(dnNotes);
-      new Formatter().joinVoices([vUp,vDn]).format([vUp,vDn],STAVE_W-(m===0?90:20));
-      var bUp=Beam.generateBeams(upNotes,{stem_direction:1});
-      var bDn=Beam.generateBeams(dnNotes,{stem_direction:-1});
-      vUp.draw(ctx,stave); vDn.draw(ctx,stave);
-      bUp.forEach(function(b){ b.setContext(ctx).draw(); });
-      bDn.forEach(function(b){ b.setContext(ctx).draw(); });
+      const uN=buildNotes(up,1), dN=buildNotes(dn,-1);
+      const vU=new Voice({num_beats:4,beat_value:4}).setStrict(false);
+      const vD=new Voice({num_beats:4,beat_value:4}).setStrict(false);
+      vU.addTickables(uN); vD.addTickables(dN);
+      new Formatter().joinVoices([vU,vD]).format([vU,vD],STAVE_W-(m===0?90:20));
+      const bU=Beam.generateBeams(uN,{stem_direction:1});
+      const bD=Beam.generateBeams(dN,{stem_direction:-1});
+      vU.draw(ctx,stave); vD.draw(ctx,stave);
+      bU.forEach(b=>b.setContext(ctx).draw());
+      bD.forEach(b=>b.setContext(ctx).draw());
     }
-  } catch(e) {
-    showError(e.message+'\n'+(e.stack||'').split('\n').slice(0,5).join('\n'));
-  }
+  } catch(e){ showError(e.message+'\n'+(e.stack||'').split('\n').slice(0,4).join('\n')); }
 }
 function renderAll(){
   renderControls();
@@ -9217,147 +9178,139 @@ function exportMidi(){
   URL.revokeObjectURL(url);
 }
 
+// ── state追加 ─────────────────────────────────────────────
+const samples={};
+let recState={mediaRecorder:null,chunks:[],targetTrack:null};
+let velPopState={track:null,step:null};
+
 // ── BPMスライダー連動 ─────────────────────────────────────────
 document.getElementById('bpmSlider').addEventListener('input', function(e){
-  var v = parseInt(e.target.value);
-  document.getElementById('bpmInput').value = v;
+  const v=parseInt(e.target.value);
+  document.getElementById('bpmInput').value=v;
   setBpm(v);
 });
-// 既存のbpmInput changeはそのまま維持、スライダーも更新
-var _origBpmChange = document.getElementById('bpmInput').onchange;
 document.getElementById('bpmInput').addEventListener('change', function(){
-  document.getElementById('bpmSlider').value = this.value;
+  document.getElementById('bpmSlider').value=this.value;
 });
 
-// ── ベロシティポップアップ ─────────────────────────────────────
+// ── ベロシティ ────────────────────────────────────────────────
 function showVelPop(track, step, x, y){
-  var ev = state.pattern.events.find(function(e){ return e.track===track && e.step===step; });
+  const ev=state.pattern.events.find(e=>e.track===track&&e.step===step);
   if(!ev) return;
-  velPopState = { track:track, step:step };
-  var pop = document.getElementById('velPop');
-  var slider = document.getElementById('velSlider');
-  var valEl = document.getElementById('velVal');
-  slider.value = ev.velocity || 100;
-  valEl.textContent = slider.value;
-  slider.oninput = function(){ valEl.textContent = slider.value; };
-  pop.style.left = Math.min(x, window.innerWidth-180) + 'px';
-  pop.style.top  = Math.max(10, y-140) + 'px';
-  pop.style.display = 'block';
+  velPopState={track,step};
+  const slider=document.getElementById('velSlider');
+  const valEl=document.getElementById('velVal');
+  slider.value=ev.velocity||100;
+  valEl.textContent=slider.value;
+  slider.oninput=()=>valEl.textContent=slider.value;
+  const pop=document.getElementById('velPop');
+  pop.style.left=Math.min(x,window.innerWidth-180)+'px';
+  pop.style.top=Math.max(10,y-140)+'px';
+  pop.style.display='block';
 }
 function applyVelocity(){
-  var track = velPopState.track, step = velPopState.step;
-  var val = parseInt(document.getElementById('velSlider').value);
-  var ev = state.pattern.events.find(function(e){ return e.track===track && e.step===step; });
-  if(ev){ ev.velocity = val; savePattern(); renderGrid(); }
-  document.getElementById('velPop').style.display = 'none';
+  const {track,step}=velPopState;
+  const val=parseInt(document.getElementById('velSlider').value);
+  const ev=state.pattern.events.find(e=>e.track===track&&e.step===step);
+  if(ev){ev.velocity=val; savePattern(); renderGrid();}
+  document.getElementById('velPop').style.display='none';
 }
 document.addEventListener('click', function(e){
-  var pop = document.getElementById('velPop');
-  if(pop.style.display==='block' && !pop.contains(e.target) && !e.target.closest('.cell')){
-    pop.style.display = 'none';
-  }
+  const pop=document.getElementById('velPop');
+  if(pop.style.display==='block'&&!pop.contains(e.target)&&!e.target.closest('.cell'))
+    pop.style.display='none';
 });
 
-// ── サンプラー ─────────────────────────────────────────────────
+// ── サンプラー ────────────────────────────────────────────────
 function closeSampler(){ document.getElementById('samplerModal').style.display='none'; }
-
 function openSampler(){
-  var body = document.getElementById('samplerBody');
-  body.innerHTML = '';
+  const body=document.getElementById('samplerBody');
+  body.innerHTML='';
   TRACKS.forEach(function(tr){
-    var s = samples[tr.id];
-    var row = document.createElement('div');
-    row.className = 'sampler-row';
-    var srcText = s ? ('✓ '+s.name) : 'シンセ（デフォルト）';
-    row.innerHTML =
+    const s=samples[tr.id];
+    const row=document.createElement('div');
+    row.className='sampler-row';
+    const srcText=s?('✓ '+s.name):'シンセ（デフォルト）';
+    row.innerHTML=
       '<span class="sampler-label" style="color:'+tr.accent+'">'+tr.label+'</span>'+
       '<span class="sampler-src" id="src_'+tr.id+'">'+srcText+'</span>'+
-      '<button class="sampler-btn" onclick="loadSampleFile(''+tr.id+'')">📁 読込</button>'+
-      '<button class="sampler-btn rec" id="rec_'+tr.id+'" onclick="toggleRecord(''+tr.id+'')">🎙 録音</button>';
+      '<button class="sampler-btn" onclick="loadSampleFile(''+tr.id+'')">&#128193; 読込</button>'+
+      '<button class="sampler-btn rec" id="rec_'+tr.id+'" onclick="toggleRecord(''+tr.id+'')">&#127897; 録音</button>';
     if(s){
-      var clrBtn = document.createElement('button');
-      clrBtn.className = 'sampler-btn';
-      clrBtn.textContent = '× クリア';
-      clrBtn.style.cssText = 'grid-column:2/5';
-      clrBtn.onclick = function(){ delete samples[tr.id]; openSampler(); };
-      row.appendChild(clrBtn);
+      const b=document.createElement('button');
+      b.className='sampler-btn'; b.textContent='× クリア'; b.style.cssText='grid-column:2/5';
+      b.onclick=function(){delete samples[tr.id];openSampler();};
+      row.appendChild(b);
     }
     body.appendChild(row);
   });
-  document.getElementById('samplerModal').style.display = 'flex';
+  document.getElementById('samplerModal').style.display='flex';
 }
-
 function loadSampleFile(trackId){
-  var input = document.createElement('input');
-  input.type = 'file';
-  input.accept = 'audio/*';
-  input.onchange = function(e){
-    var file = e.target.files[0];
-    if(!file) return;
+  const input=document.createElement('input');
+  input.type='file'; input.accept='audio/*';
+  input.onchange=function(e){
+    const file=e.target.files[0]; if(!file) return;
     ensureAudio().then(function(){
-      file.arrayBuffer().then(function(arrayBuf){
-        state.audioContext.decodeAudioData(arrayBuf, function(audioBuf){
-          samples[trackId] = { buffer:audioBuf, name:file.name };
-          var srcEl = document.getElementById('src_'+trackId);
-          if(srcEl) srcEl.textContent = '✓ '+file.name;
-        }, function(err){ alert('音源読込エラー: '+err); });
+      file.arrayBuffer().then(function(ab){
+        state.audioContext.decodeAudioData(ab,
+          function(buf){ samples[trackId]={buffer:buf,name:file.name}; const el=document.getElementById('src_'+trackId); if(el) el.textContent='✓ '+file.name; },
+          function(err){ alert('音源読込エラー: '+err); }
+        );
       });
     });
   };
   input.click();
 }
-
 function toggleRecord(trackId){
-  var btn = document.getElementById('rec_'+trackId);
-  if(recState.mediaRecorder && recState.mediaRecorder.state==='recording'){
-    recState.mediaRecorder.stop();
-    btn.textContent = '🎙 録音';
-    btn.classList.remove('recording');
-    return;
+  const btn=document.getElementById('rec_'+trackId);
+  if(recState.mediaRecorder&&recState.mediaRecorder.state==='recording'){
+    recState.mediaRecorder.stop(); btn.textContent='&#127897; 録音'; btn.classList.remove('recording'); return;
   }
   ensureAudio().then(function(){
     navigator.mediaDevices.getUserMedia({audio:true}).then(function(stream){
-      recState.chunks = [];
-      recState.targetTrack = trackId;
-      recState.mediaRecorder = new MediaRecorder(stream);
-      recState.mediaRecorder.ondataavailable = function(e){ recState.chunks.push(e.data); };
-      recState.mediaRecorder.onstop = function(){
-        stream.getTracks().forEach(function(t){ t.stop(); });
-        var blob = new Blob(recState.chunks, {type:'audio/webm'});
+      recState.chunks=[]; recState.targetTrack=trackId;
+      recState.mediaRecorder=new MediaRecorder(stream);
+      recState.mediaRecorder.ondataavailable=function(e){recState.chunks.push(e.data);};
+      recState.mediaRecorder.onstop=function(){
+        stream.getTracks().forEach(function(t){t.stop();});
+        const blob=new Blob(recState.chunks,{type:'audio/webm'});
         blob.arrayBuffer().then(function(ab){
-          state.audioContext.decodeAudioData(ab, function(buf){
-            samples[trackId] = { buffer:buf, name:'録音済み' };
-            var srcEl = document.getElementById('src_'+trackId);
-            if(srcEl) srcEl.textContent = '✓ 録音済み';
+          state.audioContext.decodeAudioData(ab,function(buf){
+            samples[trackId]={buffer:buf,name:'録音済み'};
+            const el=document.getElementById('src_'+trackId); if(el) el.textContent='✓ 録音済み';
           });
         });
       };
-      recState.mediaRecorder.start();
-      btn.textContent = '⏹ 停止';
-      btn.classList.add('recording');
-    }).catch(function(err){ alert('マイクアクセスエラー: '+err.message); });
+      recState.mediaRecorder.start(); btn.textContent='&#9209; 停止'; btn.classList.add('recording');
+    }).catch(function(err){alert('マイクエラー: '+err.message);});
   });
 }
+// サンプル再生: playTrackAt の先頭でサンプルチェック
+// playTrackAtを上書きせず、fireWithOrn/schedulerから呼ばれる前に
+// playTrackAt自体の先頭にサンプル再生を組み込む方式に変更
+// → 元のplayTrackAtにパッチを当てる（再定義ではなく内側から）
+const _sampleCheck = function(trackId, time, v){
+  const s=samples[trackId];
+  if(!s||!s.buffer||!state.audioContext) return false;
+  const ctx=state.audioContext;
+  const src=ctx.createBufferSource();
+  src.buffer=s.buffer;
+  const gain=ctx.createGain();
+  gain.gain.setValueAtTime(Math.min(1.2,Math.max(0.05,v)),time);
+  src.connect(gain).connect(ctx.destination);
+  src.start(time);
+  return true;
+};
+// 元のplayTrackAtをラップ（関数宣言は巻き上げられているので安全）
+const _origPlayTrackAt = window.playTrackAt || playTrackAt;
+window.playTrackAt = function(trackId, time, velocityScale){
+  velocityScale=velocityScale||1;
+  if(_sampleCheck(trackId,time,velocityScale)) return;
+  _origPlayTrackAt(trackId,time,velocityScale);
+};
 
 document.getElementById('samplerBtn').addEventListener('click', openSampler);
-
-// ── サンプル再生（カスタム音源優先）──────────────────────────
-var _origPlayTrackAt = playTrackAt;
-function playTrackAt(trackId, time, velocityScale){
-  velocityScale = velocityScale || 1;
-  var s = samples[trackId];
-  if(s && s.buffer && state.audioContext){
-    var ctx = state.audioContext;
-    var src = ctx.createBufferSource();
-    src.buffer = s.buffer;
-    var gain = ctx.createGain();
-    gain.gain.setValueAtTime(Math.min(1.2, Math.max(0.05, velocityScale)), time);
-    src.connect(gain).connect(ctx.destination);
-    src.start(time);
-    return;
-  }
-  _origPlayTrackAt(trackId, time, velocityScale);
-}
 
 document.getElementById('playBtn').addEventListener('click', startPlayback);
 document.getElementById('stopBtn').addEventListener('click', stopPlayback);

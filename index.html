@@ -8272,24 +8272,7 @@ vexflow/build/cjs/vexflow.js:
     }
     .orn-item:hover{background:rgba(255,255,255,.08)}
     .orn-item.active{color:#ffe66d}
-    .bpm-pill{ gap:6px; }
-    .bpm-slider{ width:80px; height:4px; cursor:pointer; accent-color:#a8ff78; vertical-align:middle; }
-    .sampler-modal{ position:fixed; inset:0; z-index:100; background:rgba(0,0,0,0.75); display:flex; align-items:center; justify-content:center; }
-    .sampler-inner{ background:#13132a; border:1px solid rgba(160,160,255,0.3); border-radius:16px; width:min(540px,96vw); max-height:82vh; display:flex; flex-direction:column; overflow:hidden; }
-    .sampler-head{ display:flex; justify-content:space-between; align-items:center; padding:12px 16px; border-bottom:1px solid rgba(160,160,255,0.2); font-weight:700; }
-    .sampler-body{ overflow-y:auto; padding:12px; display:flex; flex-direction:column; gap:8px; }
-    .sampler-row{ display:grid; grid-template-columns:90px 1fr auto auto; gap:8px; align-items:center; padding:8px 10px; background:#1a1a30; border-radius:10px; }
-    .sampler-label{ font-weight:700; font-size:.88rem; }
-    .sampler-src{ font-size:.78rem; color:#9090b8; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-    .sampler-btn{ min-height:32px; padding:0 8px; border-radius:8px; border:1px solid rgba(160,160,255,0.3); background:#23234a; color:#f0f0ff; cursor:pointer; font-size:.8rem; white-space:nowrap; }
-    .sampler-btn:hover{ background:#33337a; }
-    .sampler-btn.rec.recording{ background:#cc2222; color:#fff; border-color:#ff4444; }
-    .vel-pop{ position:fixed; z-index:60; background:#0f0f28; border:1px solid rgba(255,230,109,.28); border-radius:12px; padding:12px 14px; min-width:160px; box-shadow:0 12px 32px rgba(0,0,0,.6); }
-    .vel-title{ font-size:.78rem; color:#9090b8; padding-bottom:6px; border-bottom:1px solid rgba(255,255,255,.1); margin-bottom:8px; }
-    .vel-slider{ width:100%; accent-color:#ffe66d; display:block; margin-bottom:4px; }
-    .vel-val{ text-align:center; font-size:1.1rem; font-weight:700; color:#ffe66d; }
-    .cell .vel-bar{ position:absolute; bottom:2px; left:3px; right:3px; height:3px; background:rgba(255,255,255,0.45); border-radius:2px; pointer-events:none; }
-        @media (max-width:640px){
+    @media (max-width:640px){
       .app{padding:8px}
       .ruler,.row{grid-template-columns:82px 1fr}
       .l2{display:none}
@@ -8307,9 +8290,9 @@ vexflow/build/cjs/vexflow.js:
       <button id="clearBtn" class="btn">CLEAR</button>
     </div>
     <div class="toolbar-right">
-      <div class="pill bpm-pill">
+      <div class="pill" style="gap:6px">
         <label>BPM</label>
-        <input id="bpmSlider" class="bpm-slider" type="range" min="40" max="240" value="120">
+        <input id="bpmSlider" type="range" min="40" max="240" value="120" style="width:70px;accent-color:#a8ff78;cursor:pointer;vertical-align:middle">
         <input id="bpmInput" class="num" type="number" min="40" max="240" value="120">
       </div>
       <div class="pill">
@@ -8396,19 +8379,19 @@ vexflow/build/cjs/vexflow.js:
 </div>
 
 <div id="ornPop" class="orn-pop"></div>
-<div id="samplerModal" class="sampler-modal" style="display:none">
-  <div class="sampler-inner">
-    <div class="sampler-head">
+<div id="samplerModal" style="display:none;position:fixed;inset:0;z-index:100;background:rgba(0,0,0,0.75);align-items:center;justify-content:center">
+  <div style="background:#13132a;border:1px solid rgba(160,160,255,0.3);border-radius:16px;width:min(520px,94vw);max-height:80vh;display:flex;flex-direction:column;overflow:hidden">
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-bottom:1px solid rgba(160,160,255,0.2);font-weight:700">
       <span>&#127925; 音源設定</span>
-      <button onclick="closeSampler()" class="btn" style="min-height:32px;padding:0 10px">&#10005;</button>
+      <button onclick="document.getElementById('samplerModal').style.display='none'" class="btn" style="min-height:32px;padding:0 10px">&#10005;</button>
     </div>
-    <div class="sampler-body" id="samplerBody"></div>
+    <div id="samplerBody" style="overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:8px"></div>
   </div>
 </div>
-<div id="velPop" class="vel-pop" style="display:none">
-  <div class="vel-title">ベロシティ</div>
-  <input id="velSlider" type="range" min="1" max="127" value="100" class="vel-slider">
-  <div class="vel-val" id="velVal">100</div>
+<div id="velPop" style="display:none;position:fixed;z-index:60;background:#0f0f28;border:1px solid rgba(255,230,109,.28);border-radius:12px;padding:12px 14px;min-width:160px;box-shadow:0 12px 32px rgba(0,0,0,.6)">
+  <div style="font-size:.78rem;color:#9090b8;padding-bottom:6px;border-bottom:1px solid rgba(255,255,255,.1);margin-bottom:8px">ベロシティ</div>
+  <input id="velSlider" type="range" min="1" max="127" value="100" style="width:100%;accent-color:#ffe66d;display:block;margin-bottom:4px">
+  <div id="velVal" style="text-align:center;font-size:1.1rem;font-weight:700;color:#ffe66d">100</div>
   <div style="display:flex;gap:6px;margin-top:8px">
     <button onclick="applyVelocity()" class="btn" style="flex:1;min-height:32px;font-size:.85rem">適用</button>
     <button onclick="document.getElementById('velPop').style.display='none'" class="btn" style="min-height:32px;padding:0 8px">&#10005;</button>
@@ -8583,7 +8566,6 @@ function renderGrid(){
       if(orn==='accent') cls.push('orn-accent');
       if(orn==='ghost') cls.push('orn-ghost');
       if(orn==='buzz') cls.push('orn-buzz');
-      const velW = ev ? Math.round((ev.velocity||100)/127*100) : 0;
       html += `<button class="${cls.join(' ')}" data-track="${tr.id}" data-step="${s}" style="${ev?`--accentColor:${tr.accent}`:''}">`;
       if(orn){
         const short = ORNAMENTS.find(o=>o.id===orn)?.short || '';
@@ -8591,7 +8573,8 @@ function renderGrid(){
       }
       if(ev){
         html += `<span class="note-label">${tr.short}</span>`;
-        html += '<span class="vel-bar" style="width:'+velW+'%"></span>';
+        const vw=Math.round((ev.velocity||100)/127*100);
+        html += '<span style="position:absolute;bottom:2px;left:3px;right:3px;height:3px;background:rgba(255,255,255,0.45);border-radius:2px;pointer-events:none;width:'+vw+'%"></span>';
       }
       html += '</button>';
     }
@@ -8622,7 +8605,7 @@ function attachGridEvents(){
       e.preventDefault();
       if(btn.classList.contains('on')){
         showVelPop(btn.dataset.track, Number(btn.dataset.step), e.clientX, e.clientY);
-      } else {
+      }else{
         openOrnPopup(btn.dataset.track, Number(btn.dataset.step), e.clientX, e.clientY);
       }
     });
@@ -8677,120 +8660,121 @@ function renderControls(){
   });
 }
 function renderScore(){
-  const scoreDiv = document.getElementById('scoreDiv');
-  function showError(msg){
-    scoreDiv.innerHTML = '<div style="color:red;padding:8px;font-size:12px;background:#fff;border-radius:8px"><b>譜面エラー:</b><br><pre>'+msg+'</pre></div>';
-  }
-  try {
-    if(typeof Vex==='undefined'){ showError('VexFlowが読み込まれていません'); return; }
-    const VF=Vex.Flow, Renderer=VF.Renderer, Stave=VF.Stave, StaveNote=VF.StaveNote;
-    const Voice=VF.Voice, Formatter=VF.Formatter, Beam=VF.Beam, Articulation=VF.Articulation;
-    const GraceNote=VF.GraceNote, GraceNoteGroup=VF.GraceNoteGroup;
-    if(!Renderer||!Stave||!StaveNote){ showError('VexFlow APIが見つかりません'); return; }
-
+  const scoreDiv=document.getElementById('scoreDiv');
+  const showErr=function(msg){scoreDiv.innerHTML='<div style="color:red;padding:8px;background:#fff;border-radius:8px;font-size:12px">'+msg+'</div>';};
+  try{
+    if(typeof Vex==='undefined'){showErr('VexFlow missing');return;}
+    const VF=Vex.Flow;
+    const Renderer=VF.Renderer,Stave=VF.Stave,StaveNote=VF.StaveNote;
+    const Voice=VF.Voice,Formatter=VF.Formatter,Beam=VF.Beam;
+    const Articulation=VF.Articulation,GraceNote=VF.GraceNote,GraceNoteGroup=VF.GraceNoteGroup;
     scoreDiv.innerHTML='';
-    const spbVal=spb(), measures=state.pattern.measures;
-    const STAVE_W=300, STAVE_X0=16, STAVE_Y=20;
-    const SVG_W=STAVE_X0+measures*STAVE_W+24, SVG_H=160;
-    const DUR=spbVal===1?'q':spbVal===2?'8':spbVal===4?'16':'32';
-
+    const spbVal=spb(),ms=state.pattern.measures;
+    const SW=300,SX=16,SY=20;
+    const DUR=spbVal===1?'q':spbVal===2?'8':'16';
     const DRUM={
-      crash:       {key:'a/5/x',stem:1,circleX:true},
+      crash:       {key:'a/5/x',stem:1, cX:true},
       ride:        {key:'f/5/x',stem:1},
-      cup:         {key:'f/5/x',stem:1,diamond:true},
-      open_hihat:  {key:'g/5/x',stem:1,circleX:true,artOpen:true},
+      cup:         {key:'f/5/x',stem:1, dm:true},
+      open_hihat:  {key:'g/5/x',stem:1, cX:true, ao:true},
       closed_hihat:{key:'f/5/x',stem:1},
       snare:       {key:'b/4',  stem:-1},
       rimshot:     {key:'b/4/x',stem:-1},
       tom10:       {key:'c/5',  stem:-1},
       tom12:       {key:'a/4',  stem:-1},
       tom16:       {key:'g/4',  stem:-1},
-      kick:        {key:'d/4',  stem:-1},
+      kick:        {key:'d/4',  stem:-1}
     };
-
-    function pv(k){ const m=k.match(/([a-g])\/(\d)/i); if(!m)return 0; return parseInt(m[2])*7+{c:0,d:1,e:2,f:3,g:4,a:5,b:6}[m[1].toLowerCase()]; }
-
-    function buildNotes(slots, stemDir){
-      const spM=slots.length, notes=[];
-      const DT=[{dur:'q',st:Math.round(4*spbVal/4)},{dur:'8',st:Math.round(2*spbVal/4)},{dur:'16',st:Math.round(spbVal/4)}].filter(d=>d.st>=1);
-      let i=0;
-      while(i<spM){
-        let nx=spM; for(let j=i+1;j<spM;j++){if(slots[j]&&slots[j].length){nx=j;break;}}
-        const gap=nx-i;
+    function pv(k){
+      var m=k.match(/([a-g])\/([0-9])/i);
+      if(!m)return 0;
+      return parseInt(m[2])*7+{c:0,d:1,e:2,f:3,g:4,a:5,b:6}[m[1].toLowerCase()];
+    }
+    var DT=[
+      {dur:'q', st:Math.max(1,Math.round(4*spbVal/4))},
+      {dur:'8', st:Math.max(1,Math.round(2*spbVal/4))},
+      {dur:'16',st:Math.max(1,Math.round(1*spbVal/4))}
+    ];
+    // dedupe
+    DT=DT.filter(function(d,i){return i===0||d.st<DT[i-1].st;});
+    function build(slots,sd){
+      var notes=[],i=0,L=slots.length;
+      while(i<L){
+        var nx=L;
+        for(var j=i+1;j<L;j++){if(slots[j]&&slots[j].length){nx=j;break;}}
+        var gap=nx-i;
         if(slots[i]&&slots[i].length){
-          let ch=DT[DT.length-1]; for(const d of DT){if(d.st<=gap){ch=d;break;}}
-          const evs=slots[i], sorted=[...evs].sort((a,b)=>pv(DRUM[b.track]?.key||'b/4')-pv(DRUM[a.track]?.key||'b/4'));
-          const keys=sorted.map(e=>DRUM[e.track]?.key||'b/4');
-          const note=new StaveNote({keys,duration:ch.dur,stem_direction:stemDir,clef:'percussion'});
-          sorted.forEach((ev,ki)=>{
-            const def=DRUM[ev.track]; if(!def)return;
-            if(note.noteHeads&&note.noteHeads[ki]){
-              if(def.circleX) note.noteHeads[ki].glyph_code='noteheadCircleX';
-              if(def.diamond) note.noteHeads[ki].glyph_code='noteheadDiamondBlack';
-            }
-            if(def.artOpen&&Articulation){try{note.addModifier(new Articulation('ao'),ki);}catch(e){}}
+          var ch=DT[DT.length-1];
+          for(var di=0;di<DT.length;di++){if(DT[di].st<=gap){ch=DT[di];break;}}
+          var evs=slots[i].slice().sort(function(a,b){
+            return pv((DRUM[b.track]&&DRUM[b.track].key)||'b/4')-pv((DRUM[a.track]&&DRUM[a.track].key)||'b/4');
           });
-          const rep=sorted[0];
+          var keys=evs.map(function(e){return (DRUM[e.track]&&DRUM[e.track].key)||'b/4';});
+          var note=new StaveNote({keys:keys,duration:ch.dur,stem_direction:sd,clef:'percussion'});
+          evs.forEach(function(ev,ki){
+            var d=DRUM[ev.track];if(!d)return;
+            if(note.noteHeads&&note.noteHeads[ki]){
+              if(d.cX)note.noteHeads[ki].glyph_code='noteheadCircleX';
+              if(d.dm)note.noteHeads[ki].glyph_code='noteheadDiamondBlack';
+            }
+            if(d.ao&&Articulation){try{note.addModifier(new Articulation('ao'),ki);}catch(e){}}
+          });
+          var rep=evs[0];
           if(rep){
-            const absStep=rep.step!==undefined?rep.step:i;
-            const orn=getOrn(rep.track,absStep);
+            var absStep=rep.step!==undefined?rep.step:i;
+            var orn=getOrn(rep.track,absStep);
             if(orn==='accent'&&Articulation){try{note.addModifier(new Articulation('a>'),0);}catch(e){}}
             if((orn==='flam'||orn==='drag')&&GraceNote&&GraceNoteGroup){
               try{
-                const cnt=orn==='flam'?1:2, gArr=[];
-                for(let gi=0;gi<cnt;gi++){
-                  const def2=DRUM[rep.track]||{key:'b/4'};
-                  gArr.push(new GraceNote({keys:[def2.key],duration:'8',stem_direction:stemDir,slash:cnt===1}));
-                }
-                note.addModifier(new GraceNoteGroup(gArr,true),0);
+                var cnt=orn==='flam'?1:2,gA=[];
+                var gKey=(DRUM[rep.track]&&DRUM[rep.track].key)||'b/4';
+                for(var gi=0;gi<cnt;gi++){gA.push(new GraceNote({keys:[gKey],duration:'8',stem_direction:sd,slash:cnt===1}));}
+                note.addModifier(new GraceNoteGroup(gA,true),0);
               }catch(e){}
             }
-            if(orn==='ghost'){try{sorted.forEach((_,ki)=>note.setKeyStyle(ki,{fillStyle:'rgba(0,0,0,0.3)'}));}catch(e){}}
+            if(orn==='ghost'){try{evs.forEach(function(_,ki){note.setKeyStyle(ki,{fillStyle:'rgba(0,0,0,0.3)'});});}catch(e){}}
           }
-          notes.push(note); i+=ch.st;
-        } else {
-          let rem=gap;
+          notes.push(note);i+=ch.st;
+        }else{
+          var rem=gap;
           while(rem>0){
-            let ch=DT[DT.length-1]; for(const d of DT){if(d.st<=rem){ch=d;break;}}
-            notes.push(new StaveNote({keys:[stemDir===1?'a/5':'e/4'],duration:ch.dur+'r',stem_direction:stemDir}));
-            rem-=ch.st;
+            var ch2=DT[DT.length-1];
+            for(var di2=0;di2<DT.length;di2++){if(DT[di2].st<=rem){ch2=DT[di2];break;}}
+            notes.push(new StaveNote({keys:[sd===1?'a/5':'e/4'],duration:ch2.dur+'r',stem_direction:sd}));
+            rem-=ch2.st;
           }
           i+=gap;
         }
       }
       return notes;
     }
-
-    const renderer=new Renderer(scoreDiv,Renderer.Backends.SVG);
-    renderer.resize(SVG_W,SVG_H);
-    const ctx=renderer.getContext();
-    const svgEl=scoreDiv.querySelector('svg');
-    if(svgEl) svgEl.style.cssText='background:#fff;border-radius:8px;display:block;';
-
-    for(let m=0;m<measures;m++){
-      const spM=4*spbVal, staveX=STAVE_X0+m*STAVE_W;
-      const stave=new Stave(staveX,STAVE_Y,STAVE_W);
-      if(m===0) stave.addClef('percussion').addTimeSignature('4/4');
+    var renderer=new Renderer(scoreDiv,Renderer.Backends.SVG);
+    renderer.resize(SX+ms*SW+24,160);
+    var ctx=renderer.getContext();
+    var sv=scoreDiv.querySelector('svg');
+    if(sv)sv.style.cssText='background:#fff;border-radius:8px;display:block;';
+    for(var m=0;m<ms;m++){
+      var spM=4*spbVal;
+      var stave=new Stave(SX+m*SW,SY,SW);
+      if(m===0)stave.addClef('percussion').addTimeSignature('4/4');
       stave.setContext(ctx).draw();
-      const up=[],dn=[];
-      for(let loc=0;loc<spM;loc++){
-        const abs=m*spM+loc;
-        const evs=state.pattern.events.filter(e=>e.step===abs);
-        up.push(evs.filter(e=>(DRUM[e.track]?.stem??-1)===1).map(e=>({...e,step:abs})));
-        dn.push(evs.filter(e=>(DRUM[e.track]?.stem??-1)===-1).map(e=>({...e,step:abs})));
+      var up=[],dn=[];
+      for(var loc=0;loc<spM;loc++){
+        var abs=m*spM+loc;
+        var evAll=state.pattern.events.filter(function(e){return e.step===abs;});
+        up.push(evAll.filter(function(e){var d=DRUM[e.track];return d&&d.stem===1;}).map(function(e){return Object.assign({},e,{step:abs});}));
+        dn.push(evAll.filter(function(e){var d=DRUM[e.track];return !d||d.stem===-1;}).map(function(e){return Object.assign({},e,{step:abs});}));
       }
-      const uN=buildNotes(up,1), dN=buildNotes(dn,-1);
-      const vU=new Voice({num_beats:4,beat_value:4}).setStrict(false);
-      const vD=new Voice({num_beats:4,beat_value:4}).setStrict(false);
-      vU.addTickables(uN); vD.addTickables(dN);
-      new Formatter().joinVoices([vU,vD]).format([vU,vD],STAVE_W-(m===0?90:20));
-      const bU=Beam.generateBeams(uN,{stem_direction:1});
-      const bD=Beam.generateBeams(dN,{stem_direction:-1});
-      vU.draw(ctx,stave); vD.draw(ctx,stave);
-      bU.forEach(b=>b.setContext(ctx).draw());
-      bD.forEach(b=>b.setContext(ctx).draw());
+      var uN=build(up,1),dN=build(dn,-1);
+      var vU=new Voice({num_beats:4,beat_value:4}).setStrict(false);
+      var vD=new Voice({num_beats:4,beat_value:4}).setStrict(false);
+      vU.addTickables(uN);vD.addTickables(dN);
+      new Formatter().joinVoices([vU,vD]).format([vU,vD],SW-(m===0?90:20));
+      vU.draw(ctx,stave);vD.draw(ctx,stave);
+      Beam.generateBeams(uN,{stem_direction:1}).forEach(function(b){b.setContext(ctx).draw();});
+      Beam.generateBeams(dN,{stem_direction:-1}).forEach(function(b){b.setContext(ctx).draw();});
     }
-  } catch(e){ showError(e.message+'\n'+(e.stack||'').split('\n').slice(0,4).join('\n')); }
+  }catch(e){showErr(e.message);}
 }
 function renderAll(){
   renderControls();
@@ -9178,140 +9162,6 @@ function exportMidi(){
   URL.revokeObjectURL(url);
 }
 
-// ── state追加 ─────────────────────────────────────────────
-const samples={};
-let recState={mediaRecorder:null,chunks:[],targetTrack:null};
-let velPopState={track:null,step:null};
-
-// ── BPMスライダー連動 ─────────────────────────────────────────
-document.getElementById('bpmSlider').addEventListener('input', function(e){
-  const v=parseInt(e.target.value);
-  document.getElementById('bpmInput').value=v;
-  setBpm(v);
-});
-document.getElementById('bpmInput').addEventListener('change', function(){
-  document.getElementById('bpmSlider').value=this.value;
-});
-
-// ── ベロシティ ────────────────────────────────────────────────
-function showVelPop(track, step, x, y){
-  const ev=state.pattern.events.find(e=>e.track===track&&e.step===step);
-  if(!ev) return;
-  velPopState={track,step};
-  const slider=document.getElementById('velSlider');
-  const valEl=document.getElementById('velVal');
-  slider.value=ev.velocity||100;
-  valEl.textContent=slider.value;
-  slider.oninput=()=>valEl.textContent=slider.value;
-  const pop=document.getElementById('velPop');
-  pop.style.left=Math.min(x,window.innerWidth-180)+'px';
-  pop.style.top=Math.max(10,y-140)+'px';
-  pop.style.display='block';
-}
-function applyVelocity(){
-  const {track,step}=velPopState;
-  const val=parseInt(document.getElementById('velSlider').value);
-  const ev=state.pattern.events.find(e=>e.track===track&&e.step===step);
-  if(ev){ev.velocity=val; savePattern(); renderGrid();}
-  document.getElementById('velPop').style.display='none';
-}
-document.addEventListener('click', function(e){
-  const pop=document.getElementById('velPop');
-  if(pop.style.display==='block'&&!pop.contains(e.target)&&!e.target.closest('.cell'))
-    pop.style.display='none';
-});
-
-// ── サンプラー ────────────────────────────────────────────────
-function closeSampler(){ document.getElementById('samplerModal').style.display='none'; }
-function openSampler(){
-  const body=document.getElementById('samplerBody');
-  body.innerHTML='';
-  TRACKS.forEach(function(tr){
-    const s=samples[tr.id];
-    const row=document.createElement('div');
-    row.className='sampler-row';
-    const srcText=s?('✓ '+s.name):'シンセ（デフォルト）';
-    row.innerHTML=
-      '<span class="sampler-label" style="color:'+tr.accent+'">'+tr.label+'</span>'+
-      '<span class="sampler-src" id="src_'+tr.id+'">'+srcText+'</span>'+
-      '<button class="sampler-btn" onclick="loadSampleFile(''+tr.id+'')">&#128193; 読込</button>'+
-      '<button class="sampler-btn rec" id="rec_'+tr.id+'" onclick="toggleRecord(''+tr.id+'')">&#127897; 録音</button>';
-    if(s){
-      const b=document.createElement('button');
-      b.className='sampler-btn'; b.textContent='× クリア'; b.style.cssText='grid-column:2/5';
-      b.onclick=function(){delete samples[tr.id];openSampler();};
-      row.appendChild(b);
-    }
-    body.appendChild(row);
-  });
-  document.getElementById('samplerModal').style.display='flex';
-}
-function loadSampleFile(trackId){
-  const input=document.createElement('input');
-  input.type='file'; input.accept='audio/*';
-  input.onchange=function(e){
-    const file=e.target.files[0]; if(!file) return;
-    ensureAudio().then(function(){
-      file.arrayBuffer().then(function(ab){
-        state.audioContext.decodeAudioData(ab,
-          function(buf){ samples[trackId]={buffer:buf,name:file.name}; const el=document.getElementById('src_'+trackId); if(el) el.textContent='✓ '+file.name; },
-          function(err){ alert('音源読込エラー: '+err); }
-        );
-      });
-    });
-  };
-  input.click();
-}
-function toggleRecord(trackId){
-  const btn=document.getElementById('rec_'+trackId);
-  if(recState.mediaRecorder&&recState.mediaRecorder.state==='recording'){
-    recState.mediaRecorder.stop(); btn.textContent='&#127897; 録音'; btn.classList.remove('recording'); return;
-  }
-  ensureAudio().then(function(){
-    navigator.mediaDevices.getUserMedia({audio:true}).then(function(stream){
-      recState.chunks=[]; recState.targetTrack=trackId;
-      recState.mediaRecorder=new MediaRecorder(stream);
-      recState.mediaRecorder.ondataavailable=function(e){recState.chunks.push(e.data);};
-      recState.mediaRecorder.onstop=function(){
-        stream.getTracks().forEach(function(t){t.stop();});
-        const blob=new Blob(recState.chunks,{type:'audio/webm'});
-        blob.arrayBuffer().then(function(ab){
-          state.audioContext.decodeAudioData(ab,function(buf){
-            samples[trackId]={buffer:buf,name:'録音済み'};
-            const el=document.getElementById('src_'+trackId); if(el) el.textContent='✓ 録音済み';
-          });
-        });
-      };
-      recState.mediaRecorder.start(); btn.textContent='&#9209; 停止'; btn.classList.add('recording');
-    }).catch(function(err){alert('マイクエラー: '+err.message);});
-  });
-}
-// サンプル再生: playTrackAt の先頭でサンプルチェック
-// playTrackAtを上書きせず、fireWithOrn/schedulerから呼ばれる前に
-// playTrackAt自体の先頭にサンプル再生を組み込む方式に変更
-// → 元のplayTrackAtにパッチを当てる（再定義ではなく内側から）
-const _sampleCheck = function(trackId, time, v){
-  const s=samples[trackId];
-  if(!s||!s.buffer||!state.audioContext) return false;
-  const ctx=state.audioContext;
-  const src=ctx.createBufferSource();
-  src.buffer=s.buffer;
-  const gain=ctx.createGain();
-  gain.gain.setValueAtTime(Math.min(1.2,Math.max(0.05,v)),time);
-  src.connect(gain).connect(ctx.destination);
-  src.start(time);
-  return true;
-};
-// 元のplayTrackAtをラップ（関数宣言は巻き上げられているので安全）
-const _origPlayTrackAt = window.playTrackAt || playTrackAt;
-window.playTrackAt = function(trackId, time, velocityScale){
-  velocityScale=velocityScale||1;
-  if(_sampleCheck(trackId,time,velocityScale)) return;
-  _origPlayTrackAt(trackId,time,velocityScale);
-};
-
-document.getElementById('samplerBtn').addEventListener('click', openSampler);
-
 document.getElementById('playBtn').addEventListener('click', startPlayback);
 document.getElementById('stopBtn').addEventListener('click', stopPlayback);
 document.getElementById('clearBtn').addEventListener('click', clearAll);
@@ -9331,6 +9181,103 @@ feelInput.addEventListener('change', ()=>setFeel(feelInput.value));
 document.querySelectorAll('.gm-btn').forEach(btn=>{
   btn.addEventListener('click', ()=>setGridMode(btn.dataset.mode));
 });
+
+// BPMスライダー
+document.getElementById('bpmSlider').addEventListener('input',function(e){
+  var v=parseInt(e.target.value);
+  document.getElementById('bpmInput').value=v;
+  setBpm(v);
+});
+document.getElementById('bpmInput').addEventListener('change',function(){
+  document.getElementById('bpmSlider').value=this.value;
+});
+// ベロシティ
+var _VP={track:null,step:null};
+function showVelPop(track,step,x,y){
+  var ev=state.pattern.events.find(function(e){return e.track===track&&e.step===step;});
+  if(!ev)return;
+  _VP.track=track;_VP.step=step;
+  var sl=document.getElementById('velSlider'),vl=document.getElementById('velVal');
+  sl.value=ev.velocity||100;vl.textContent=sl.value;
+  sl.oninput=function(){vl.textContent=sl.value;};
+  var p=document.getElementById('velPop');
+  p.style.left=Math.min(x,window.innerWidth-180)+'px';
+  p.style.top=Math.max(10,y-140)+'px';
+  p.style.display='block';
+}
+function applyVelocity(){
+  var ev=state.pattern.events.find(function(e){return e.track===_VP.track&&e.step===_VP.step;});
+  if(ev){ev.velocity=parseInt(document.getElementById('velSlider').value);savePattern();renderGrid();}
+  document.getElementById('velPop').style.display='none';
+}
+document.addEventListener('click',function(e){
+  var p=document.getElementById('velPop');
+  if(p&&p.style.display==='block'&&!p.contains(e.target)&&!e.target.closest('.cell'))p.style.display='none';
+});
+// サンプラー
+var _S={},_R={mr:null,chunks:[],track:null};
+function openSampler(){
+  var body=document.getElementById('samplerBody');
+  body.innerHTML='';
+  var bs='min-height:32px;padding:0 8px;border-radius:8px;border:1px solid rgba(160,160,255,0.3);background:#23234a;color:#f0f0ff;cursor:pointer;font-size:.8rem;white-space:nowrap';
+  TRACKS.forEach(function(tr){
+    var s=_S[tr.id],row=document.createElement('div');
+    row.style.cssText='display:grid;grid-template-columns:90px 1fr auto auto;gap:8px;align-items:center;padding:8px 10px;background:#1a1a30;border-radius:10px';
+    var tid=JSON.stringify(tr.id);
+    row.innerHTML='<span style="font-weight:700;font-size:.88rem;color:'+tr.accent+'">'+tr.label+'</span>'+
+      '<span id="src_'+tr.id+'" style="font-size:.78rem;color:#9090b8;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+(s?'OK '+s.name:'シンセ')+'</span>'+
+      '<button style="'+bs+'" onclick="loadSF('+tid+')">&#128193;</button>'+
+      '<button id="rec_'+tr.id+'" style="'+bs+'" onclick="togRec('+tid+')">&#127897;</button>';
+    if(s){var b=document.createElement('button');b.style.cssText=bs+';grid-column:2/5';b.textContent='x クリア';b.onclick=function(){delete _S[tr.id];openSampler();};row.appendChild(b);}
+    body.appendChild(row);
+  });
+  document.getElementById('samplerModal').style.display='flex';
+}
+function loadSF(tid){
+  var inp=document.createElement('input');inp.type='file';inp.accept='audio/*';
+  inp.onchange=function(e){
+    var f=e.target.files[0];if(!f)return;
+    ensureAudio().then(function(){
+      f.arrayBuffer().then(function(ab){
+        state.audioContext.decodeAudioData(ab,
+          function(buf){_S[tid]={buffer:buf,name:f.name};var el=document.getElementById('src_'+tid);if(el)el.textContent='OK '+f.name;},
+          function(err){alert('Error: '+err);});
+      });
+    });
+  };inp.click();
+}
+function togRec(tid){
+  var btn=document.getElementById('rec_'+tid);
+  if(_R.mr&&_R.mr.state==='recording'){_R.mr.stop();btn.innerHTML='&#127897;';return;}
+  ensureAudio().then(function(){
+    navigator.mediaDevices.getUserMedia({audio:true}).then(function(stream){
+      _R.chunks=[];_R.track=tid;_R.mr=new MediaRecorder(stream);
+      _R.mr.ondataavailable=function(e){_R.chunks.push(e.data);};
+      _R.mr.onstop=function(){
+        stream.getTracks().forEach(function(t){t.stop();});
+        new Blob(_R.chunks,{type:'audio/webm'}).arrayBuffer().then(function(ab){
+          state.audioContext.decodeAudioData(ab,function(buf){
+            _S[tid]={buffer:buf,name:'REC'};
+            var el=document.getElementById('src_'+tid);if(el)el.textContent='OK REC';
+          });
+        });
+      };
+      _R.mr.start();btn.innerHTML='&#9209;';
+    }).catch(function(err){alert('Mic error: '+err.message);});
+  });
+}
+document.getElementById('samplerBtn').addEventListener('click',openSampler);
+// fireWithOrn wrap for sample playback
+var _oFWO=fireWithOrn;
+function fireWithOrn(tid,step,time,vel){
+  var s=_S[tid];
+  if(s&&s.buffer&&state.audioContext){
+    var src=state.audioContext.createBufferSource(),g=state.audioContext.createGain();
+    src.buffer=s.buffer;g.gain.setValueAtTime(Math.min(1.2,Math.max(0.05,vel)),time);
+    src.connect(g).connect(state.audioContext.destination);src.start(time);return;
+  }
+  _oFWO(tid,step,time,vel);
+}
 
 renderAll();
 savePattern();

@@ -8909,6 +8909,17 @@ function playTrackAt(trackId, time, velocityScale=1){
   }
 }
 function fireWithOrn(trackId, step, time, baseVel){
+  // カスタムサンプルがあれば優先再生
+  var _s=_S&&_S[trackId];
+  if(_s&&_s.buffer&&state.audioContext){
+    var _src=state.audioContext.createBufferSource();
+    var _g=state.audioContext.createGain();
+    _src.buffer=_s.buffer;
+    _g.gain.setValueAtTime(Math.min(1.2,Math.max(0.05,baseVel)),time);
+    _src.connect(_g).connect(state.audioContext.destination);
+    _src.start(time);
+    return;
+  }
   const orn = getOrn(trackId, step);
   const grace = 0.035;
   if(!orn){
@@ -9272,16 +9283,7 @@ function togRec(tid){
 }
 document.getElementById('samplerBtn').addEventListener('click',openSampler);
 // fireWithOrn wrap for sample playback
-var _oFWO=fireWithOrn;
-function fireWithOrn(tid,step,time,vel){
-  var s=_S[tid];
-  if(s&&s.buffer&&state.audioContext){
-    var src=state.audioContext.createBufferSource(),g=state.audioContext.createGain();
-    src.buffer=s.buffer;g.gain.setValueAtTime(Math.min(1.2,Math.max(0.05,vel)),time);
-    src.connect(g).connect(state.audioContext.destination);src.start(time);return;
-  }
-  _oFWO(tid,step,time,vel);
-}
+// sample playback handled inside fireWithOrn
 
 renderAll();
 savePattern();

@@ -8769,10 +8769,14 @@ function renderScore(){
       var vU=new Voice({num_beats:4,beat_value:4}).setStrict(false);
       var vD=new Voice({num_beats:4,beat_value:4}).setStrict(false);
       vU.addTickables(uN);vD.addTickables(dN);
-      new Formatter().joinVoices([vU,vD]).format([vU,vD],SW-(m===0?90:20));
-      vU.draw(ctx,stave);vD.draw(ctx,stave);
-      Beam.generateBeams(uN,{stem_direction:1}).forEach(function(b){b.setContext(ctx).draw();});
-      Beam.generateBeams(dN,{stem_direction:-1}).forEach(function(b){b.setContext(ctx).draw();});
+      new Formatter().joinVoices([vU,vD]).format([vU,vD],SW-(m===0?100:10));
+      // Beamを先に生成してからvoice.draw()を呼ぶ
+      var bU=Beam.generateBeams(uN,{stem_direction:1});
+      var bD=Beam.generateBeams(dN,{stem_direction:-1});
+      vU.draw(ctx,stave);
+      vD.draw(ctx,stave);
+      bU.forEach(function(b){b.setContext(ctx).draw();});
+      bD.forEach(function(b){b.setContext(ctx).draw();});
     }
   }catch(e){showErr(e.message);}
 }
